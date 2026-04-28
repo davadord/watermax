@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Watermax{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4><i class="bi bi-speedometer2"></i> Reporte diario de mantenimientos</h4>
+  <form class="d-flex gap-2" method="GET">
+    <select name="zona_id" class="form-select">
+      <option value="">Selecciona una zona…</option>
+      {% for zona in zonas %}
+        <option value="{{ zona.id }}" {% if zona.id == zona_id %}selected{% endif %}>
+          {{ zona.nombre }}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Ver</button>
+  </form>
+</div>
+
+{% if zona_id and not mantenimientos_hoy %}
+  <div class="alert alert-success">
+    <i class="bi bi-check-circle"></i> No hay mantenimientos pendientes ni próximos en esta zona.
+  </div>
+{% endif %}
+
+{% for item in mantenimientos_hoy %}
+  <div class="card mb-3">
+    <div class="card-header">
+      <strong>{{ item.equipo.cliente.nombre }}</strong>
+      — {{ item.equipo.cliente.direccion }}
+      <span class="badge bg-secondary ms-2">{{ item.equipo.tipo_equipo.nombre }}</span>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Componente</th>
+            <th>Fecha proyectada</th>
+            <th>Días restantes</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in item.vencimientos %}
+          <tr class="{% if v.urgencia == 'vencido' %}table-danger{% elif v.urgencia == 'proximo' %}table-warning{% endif %}">
+            <td>{{ v.componente.nombre }}</td>
+            <td>{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
+            <td>{{ v.dias_restantes }}</td>
+            <td>
+              {% if v.urgencia == 'vencido' %}
+                <span class="badge bg-danger">Vencido</span>
+              {% elif v.urgencia == 'proximo' %}
+                <span class="badge bg-warning text-dark">Próximo</span>
+              {% else %}
+                <span class="badge bg-success">En plazo</span>
+              {% endif %}
+              <small class="text-muted ms-1">({{ v.fuente }})</small>
+            </td>
+            <td>
+              <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=item.equipo.id) }}"
+                 class="btn btn-sm btn-outline-primary">
+                Registrar
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endfor %}
+{% endblock %}

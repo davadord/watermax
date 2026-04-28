@@ -1,0 +1,36 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Variables de entorno (NUNCA subir al repo)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Scripts de inicialización con credenciales hardcodeadas
+setup_db.py
+
+# Base de datos local
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# PDFs generados
+app/static/reports/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

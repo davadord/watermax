@@ -1,0 +1,60 @@
+SPRINT 0 — Setup y estructura base
+Período: abril 2026
+Estado: Completado
+
+OBJETIVO
+Configurar el entorno de desarrollo local y dejar la arquitectura base lista
+para comenzar la implementación de módulos funcionales en el Sprint 1.
+
+LO QUE SE IMPLEMENTÓ
+
+Entorno y herramientas
+- Python 3.13, Flask 3.0.3, MySQL 8 en Windows 11
+- Entorno virtual con dependencias documentadas en requirements.txt
+- VS Code como editor principal
+- Git y GitHub configurados para control de versiones
+
+Arquitectura del proyecto
+- Estructura MVC con Flask Blueprints
+- Cuatro blueprints: auth (/auth), admin (/admin),
+  maintenance (/maintenance), reports (/reports)
+- Capas separadas: controllers/, models/, services/, templates/
+
+Modelos de base de datos (SQLAlchemy 2.0)
+- Usuario: roles propietario / administrativo / tecnico
+- Zona, Cliente: gestión geográfica de clientes
+- TipoEquipo, Componente, TipoEquipoComponente: catálogo N:M con intervalo nominal
+- EquipoInstalado: instancia de equipo en cliente
+- Mantenimiento, DetalleMantenimiento: registro de órdenes de trabajo
+
+Módulo de autenticación
+- Hash de contraseñas con bcrypt
+- Protección CSRF con Flask-WTF
+- Bloqueo temporal tras 5 intentos fallidos (15 minutos)
+- Cumplimiento LOPDP y OWASP Top 10
+
+Motor de predicción (prediction_service.py)
+- Combina intervalo nominal del fabricante con promedio de ciclos reales
+- Clasifica urgencia: vencido / próximo (<=7 días) / en plazo
+- Fallback a intervalo nominal si el historial difiere más del 50%
+
+Dashboard inicial
+- Filtro por zona geográfica
+- Vencimientos coloreados por urgencia
+- Acceso directo a registro de mantenimiento
+
+CORRECCIONES APLICADAS AL CIERRE
+- load_user: actualizado a db.session.get() (SQLAlchemy 2.0)
+- get_or_404: actualizado a db.get_or_404() (Flask-SQLAlchemy 3.x)
+- nuevo_cliente: validación de zona_id antes de crear el objeto
+
+DECISIONES TÉCNICAS RELEVANTES
+- Se eligió arquitectura monolítica en tres capas sobre microservicios
+  por adecuarse al tamaño del equipo (1 persona) y al plazo del proyecto
+- Se usa intervalo nominal como respaldo en el motor predictivo para
+  garantizar que equipos sin historial también reciban proyección
+
+PENDIENTE PARA SPRINT 1
+- Templates HTML: clientes, zonas, equipos y formulario de mantenimiento
+- Rutas CRUD completas: editar y eliminar para los tres recursos
+- Decorador de control de roles
