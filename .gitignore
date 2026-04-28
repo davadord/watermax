@@ -19,8 +19,9 @@ build/
 # Scripts de inicialización con credenciales hardcodeadas
 setup_db.py
 
-# Documentación interna de sprints
+# Documentación interna de sprints y notas privadas
 sprints/
+README_interno.md
 
 # Base de datos local
 *.db
