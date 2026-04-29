@@ -5,12 +5,16 @@ from datetime import date
 from app import db
 from app.models.maintenance import Mantenimiento, DetalleMantenimiento
 from app.models.equipment import EquipoInstalado, Componente
+from app.utils.decorators import role_required
 
 maintenance_bp = Blueprint("maintenance", __name__)
+
+_all_roles = ("propietario", "administrativo", "tecnico")
 
 
 @maintenance_bp.route("/nuevo/<int:equipo_id>", methods=["GET", "POST"])
 @login_required
+@role_required(*_all_roles)
 def nuevo_mantenimiento(equipo_id):
     equipo = db.get_or_404(EquipoInstalado, equipo_id)
     componentes = [tc.componente for tc in equipo.tipo_equipo.componentes]

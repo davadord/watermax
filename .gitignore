@@ -19,9 +19,15 @@ build/
 # Scripts de inicialización con credenciales hardcodeadas
 setup_db.py
 
+# Scripts de configuración de GitHub (tokens, exports)
+scripts/
+
 # Documentación interna de sprints y notas privadas
 sprints/
 README_interno.md
+
+# Material de estudio personal
+teoria/
 
 # Base de datos local
 *.db
@@ -31,6 +37,9 @@ README_interno.md
 .vscode/
 .idea/
 *.swp
+
+# Claude Code
+CLAUDE.md
 
 # PDFs generados
 app/static/reports/
