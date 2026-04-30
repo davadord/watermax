@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{% if equipo %}Editar equipo{% else %}Nuevo equipo{% endif %} — Watermax{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h4 class="mb-4">
+      <i class="bi bi-tools text-primary"></i>
+      {% if equipo %}Editar equipo{% else %}Nuevo equipo{% endif %}
+    </h4>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <label class="form-label">Cliente <span class="text-danger">*</span></label>
+        <select name="cliente_id" class="form-select" required>
+          <option value="">Selecciona un cliente</option>
+          {% for cliente in clientes %}
+            <option value="{{ cliente.id }}"
+              {% if equipo and equipo.cliente_id == cliente.id %}selected{% endif %}>
+              {{ cliente.nombre }} — {{ cliente.zona.nombre }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Tipo de equipo <span class="text-danger">*</span></label>
+        <select name="tipo_equipo_id" class="form-select" required>
+          <option value="">Selecciona un tipo</option>
+          {% for tipo in tipos_equipo %}
+            <option value="{{ tipo.id }}"
+              {% if equipo and equipo.tipo_equipo_id == tipo.id %}selected{% endif %}>
+              {{ tipo.nombre }}{% if tipo.marca %} — {{ tipo.marca }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">N.° de serie</label>
+        <input type="text" name="numero_serie" class="form-control"
+               value="{{ equipo.numero_serie if equipo else '' }}" maxlength="80">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Fecha de instalación <span class="text-danger">*</span></label>
+        <input type="date" name="fecha_instalacion" class="form-control" required
+               value="{{ equipo.fecha_instalacion.strftime('%Y-%m-%d') if equipo else '' }}">
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg"></i> Guardar
+        </button>
+        <a href="{{ url_for('admin.equipos') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Clientes — Watermax{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4><i class="bi bi-people-fill text-primary"></i> Clientes</h4>
+  <a href="{{ url_for('admin.nuevo_cliente') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Nuevo cliente
+  </a>
+</div>
+
+<form class="row g-2 mb-3" method="GET">
+  <div class="col-auto">
+    <select name="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todas las zonas</option>
+      {% for zona in zonas %}
+        <option value="{{ zona.id }}" {% if zona_id == zona.id %}selected{% endif %}>{{ zona.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Nombre</th>
+        <th>Zona</th>
+        <th>Teléfono</th>
+        <th>Email</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cliente in clientes %}
+      <tr>
+        <td>{{ cliente.nombre }}</td>
+        <td>{{ cliente.zona.nombre }}</td>
+        <td>{{ cliente.telefono or '—' }}</td>
+        <td>{{ cliente.email or '—' }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('admin.editar_cliente', id=cliente.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <form method="POST" action="{{ url_for('admin.eliminar_cliente', id=cliente.id) }}" class="d-inline"
+                onsubmit="return confirm('¿Eliminar a {{ cliente.nombre }}?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" class="text-center text-muted py-4">No hay clientes registrados.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Equipos instalados — Watermax{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4><i class="bi bi-tools text-primary"></i> Equipos instalados</h4>
+  <a href="{{ url_for('admin.nuevo_equipo') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Nuevo equipo
+  </a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>N.° serie</th>
+        <th>Tipo de equipo</th>
+        <th>Cliente</th>
+        <th>Zona</th>
+        <th>Instalación</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for equipo in equipos %}
+      <tr>
+        <td>{{ equipo.numero_serie or '—' }}</td>
+        <td>{{ equipo.tipo_equipo.nombre }}</td>
+        <td>{{ equipo.cliente.nombre }}</td>
+        <td>{{ equipo.cliente.zona.nombre }}</td>
+        <td>{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('admin.editar_equipo', id=equipo.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <form method="POST" action="{{ url_for('admin.eliminar_equipo', id=equipo.id) }}" class="d-inline"
+                onsubmit="return confirm('¿Eliminar este equipo?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center text-muted py-4">No hay equipos registrados.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
