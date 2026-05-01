@@ -8,24 +8,13 @@
   </a>
 </div>
 
-<form class="row g-2 mb-3" method="GET">
-  <div class="col-auto">
-    <select name="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">Todas las zonas</option>
-      {% for zona in zonas %}
-        <option value="{{ zona.id }}" {% if zona_id == zona.id %}selected{% endif %}>{{ zona.nombre }}</option>
-      {% endfor %}
-    </select>
-  </div>
-</form>
-
 <div class="table-responsive">
   <table class="table table-hover align-middle">
     <thead class="table-light">
       <tr>
         <th>Nombre</th>
-        <th>Zona</th>
         <th>Teléfono</th>
+        <th>Dirección</th>
         <th>Email</th>
         <th></th>
       </tr>
@@ -34,8 +23,8 @@
       {% for cliente in clientes %}
       <tr>
         <td>{{ cliente.nombre }}</td>
-        <td>{{ cliente.zona.nombre }}</td>
         <td>{{ cliente.telefono or '—' }}</td>
+        <td>{{ cliente.direccion or '—' }}</td>
         <td>{{ cliente.email or '—' }}</td>
         <td class="text-end">
           <a href="{{ url_for('admin.editar_cliente', id=cliente.id) }}" class="btn btn-outline-secondary btn-sm">

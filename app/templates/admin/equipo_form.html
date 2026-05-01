@@ -18,10 +18,29 @@
           {% for cliente in clientes %}
             <option value="{{ cliente.id }}"
               {% if equipo and equipo.cliente_id == cliente.id %}selected{% endif %}>
-              {{ cliente.nombre }} — {{ cliente.zona.nombre }}
+              {{ cliente.nombre }}
             </option>
           {% endfor %}
         </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Zona de instalación <span class="text-danger">*</span></label>
+        <select name="zona_id" class="form-select" required>
+          <option value="">Selecciona una zona</option>
+          {% for zona in zonas %}
+            <option value="{{ zona.id }}"
+              {% if equipo and equipo.zona_id == zona.id %}selected{% endif %}>
+              {{ zona.nombre }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Sector <small class="text-muted">(opcional — ej: Galpón 3, Cocina)</small></label>
+        <input type="text" name="sector" class="form-control"
+               value="{{ equipo.sector if equipo and equipo.sector else '' }}" maxlength="100">
       </div>
 
       <div class="mb-3">

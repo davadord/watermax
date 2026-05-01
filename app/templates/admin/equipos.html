@@ -10,6 +10,14 @@
 
 <form class="row g-2 mb-3" method="GET">
   <div class="col-auto">
+    <select name="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todas las zonas</option>
+      {% for zona in zonas %}
+        <option value="{{ zona.id }}" {% if zona_id == zona.id %}selected{% endif %}>{{ zona.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
     <select name="cliente_id" class="form-select form-select-sm" onchange="this.form.submit()">
       <option value="">Todos los clientes</option>
       {% for cliente in clientes %}
@@ -17,6 +25,11 @@
       {% endfor %}
     </select>
   </div>
+  {% if zona_id or cliente_id %}
+  <div class="col-auto">
+    <a href="{{ url_for('admin.equipos') }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+  </div>
+  {% endif %}
 </form>
 
 <div class="table-responsive">
@@ -27,6 +40,7 @@
         <th>Tipo de equipo</th>
         <th>Cliente</th>
         <th>Zona</th>
+        <th>Sector</th>
         <th>Instalación</th>
         <th></th>
       </tr>
@@ -37,7 +51,8 @@
         <td>{{ equipo.numero_serie or '—' }}</td>
         <td>{{ equipo.tipo_equipo.nombre }}</td>
         <td>{{ equipo.cliente.nombre }}</td>
-        <td>{{ equipo.cliente.zona.nombre }}</td>
+        <td>{{ equipo.zona.nombre }}</td>
+        <td>{{ equipo.sector or '—' }}</td>
         <td>{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
         <td class="text-end">
           <a href="{{ url_for('admin.editar_equipo', id=equipo.id) }}" class="btn btn-outline-secondary btn-sm">
@@ -54,7 +69,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" class="text-center text-muted py-4">No hay equipos registrados.</td>
+        <td colspan="7" class="text-center text-muted py-4">No hay equipos registrados.</td>
       </tr>
       {% endfor %}
     </tbody>

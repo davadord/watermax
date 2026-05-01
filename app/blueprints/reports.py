@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request
 from flask_login import login_required
 
-from app.models.client import Zona, Cliente
+from app.models.client import Zona
+from app.models.equipment import EquipoInstalado
 from app.services.prediction_service import calcular_vencimientos
 
 reports_bp = Blueprint("reports", __name__)
@@ -15,14 +16,10 @@ def dashboard():
 
     mantenimientos_hoy = []
     if zona_id:
-        clientes = Cliente.query.filter_by(zona_id=zona_id, activo=True).all()
-        for cliente in clientes:
-            for equipo in cliente.equipos:
-                if equipo.activo:
-                    vencimientos = calcular_vencimientos(equipo)
-                    mantenimientos_hoy.append(
-                        {"equipo": equipo, "vencimientos": vencimientos}
-                    )
+        equipos = EquipoInstalado.query.filter_by(zona_id=zona_id, activo=True).all()
+        for equipo in equipos:
+            vencimientos = calcular_vencimientos(equipo)
+            mantenimientos_hoy.append({"equipo": equipo, "vencimientos": vencimientos})
 
     return render_template(
         "reports/dashboard.html",

@@ -8,7 +8,6 @@ class Zona(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(80), nullable=False, unique=True)
     descripcion = db.Column(db.String(200))
-    clientes = db.relationship("Cliente", backref="zona", lazy=True)
 
     def __repr__(self):
         return f"<Zona {self.nombre}>"
@@ -22,7 +21,6 @@ class Cliente(db.Model):
     telefono = db.Column(db.String(20))
     direccion = db.Column(db.String(250))
     email = db.Column(db.String(120))
-    zona_id = db.Column(db.Integer, db.ForeignKey("zonas.id"), nullable=False)
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     equipos = db.relationship("EquipoInstalado", backref="cliente", lazy=True)

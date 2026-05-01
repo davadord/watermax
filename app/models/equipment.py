@@ -29,7 +29,7 @@ class TipoEquipoComponente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tipo_equipo_id = db.Column(db.Integer, db.ForeignKey("tipos_equipo.id"), nullable=False)
     componente_id = db.Column(db.Integer, db.ForeignKey("componentes.id"), nullable=False)
-    intervalo_nominal = db.Column(db.Integer, nullable=False)  # en meses
+    intervalo_nominal = db.Column(db.Integer, nullable=False)
 
 
 class EquipoInstalado(db.Model):
@@ -38,7 +38,10 @@ class EquipoInstalado(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cliente_id = db.Column(db.Integer, db.ForeignKey("clientes.id"), nullable=False)
     tipo_equipo_id = db.Column(db.Integer, db.ForeignKey("tipos_equipo.id"), nullable=False)
+    zona_id = db.Column(db.Integer, db.ForeignKey("zonas.id"), nullable=False)
+    sector = db.Column(db.String(100))
     numero_serie = db.Column(db.String(80))
     fecha_instalacion = db.Column(db.Date, nullable=False)
     activo = db.Column(db.Boolean, default=True)
+    zona = db.relationship("Zona", backref="equipos")
     mantenimientos = db.relationship("Mantenimiento", backref="equipo", lazy=True)

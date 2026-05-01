@@ -19,37 +19,26 @@ _admin_roles = ("propietario", "administrativo")
 @login_required
 @role_required(*_admin_roles)
 def clientes():
-    zona_id = request.args.get("zona_id", type=int)
-    query = Cliente.query.filter_by(activo=True)
-    if zona_id:
-        query = query.filter_by(zona_id=zona_id)
-    clientes = query.order_by(Cliente.nombre).all()
-    zonas = Zona.query.order_by(Zona.nombre).all()
-    return render_template("admin/clientes.html", clientes=clientes, zonas=zonas, zona_id=zona_id)
+    clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
+    return render_template("admin/clientes.html", clientes=clientes)
 
 
 @admin_bp.route("/clientes/nuevo", methods=["GET", "POST"])
 @login_required
 @role_required(*_admin_roles)
 def nuevo_cliente():
-    zonas = Zona.query.order_by(Zona.nombre).all()
     if request.method == "POST":
-        zona_id = request.form.get("zona_id")
-        if not zona_id:
-            flash("Debes seleccionar una zona.", "danger")
-            return render_template("admin/cliente_form.html", zonas=zonas, cliente=None)
         cliente = Cliente(
             nombre=request.form["nombre"],
             telefono=request.form.get("telefono"),
             direccion=request.form.get("direccion"),
             email=request.form.get("email"),
-            zona_id=int(zona_id),
         )
         db.session.add(cliente)
         db.session.commit()
         flash(f"Cliente {cliente.nombre} registrado.", "success")
         return redirect(url_for("admin.clientes"))
-    return render_template("admin/cliente_form.html", zonas=zonas, cliente=None)
+    return render_template("admin/cliente_form.html", cliente=None)
 
 
 @admin_bp.route("/clientes/<int:id>/editar", methods=["GET", "POST"])
@@ -60,21 +49,15 @@ def editar_cliente(id):
     if not cliente or not cliente.activo:
         flash("Cliente no encontrado.", "danger")
         return redirect(url_for("admin.clientes"))
-    zonas = Zona.query.order_by(Zona.nombre).all()
     if request.method == "POST":
-        zona_id = request.form.get("zona_id")
-        if not zona_id:
-            flash("Debes seleccionar una zona.", "danger")
-            return render_template("admin/cliente_form.html", zonas=zonas, cliente=cliente)
         cliente.nombre = request.form["nombre"]
         cliente.telefono = request.form.get("telefono")
         cliente.direccion = request.form.get("direccion")
         cliente.email = request.form.get("email")
-        cliente.zona_id = int(zona_id)
         db.session.commit()
         flash(f"Cliente {cliente.nombre} actualizado.", "success")
         return redirect(url_for("admin.clientes"))
-    return render_template("admin/cliente_form.html", zonas=zonas, cliente=cliente)
+    return render_template("admin/cliente_form.html", cliente=cliente)
 
 
 @admin_bp.route("/clientes/<int:id>/eliminar", methods=["POST"])
@@ -151,9 +134,9 @@ def eliminar_zona(id):
     if not zona:
         flash("Zona no encontrada.", "danger")
         return redirect(url_for("admin.zonas"))
-    clientes_activos = [c for c in zona.clientes if c.activo]
-    if clientes_activos:
-        flash(f"No se puede eliminar: la zona {zona.nombre} tiene clientes activos.", "danger")
+    equipos_activos = [e for e in zona.equipos if e.activo]
+    if equipos_activos:
+        flash(f"No se puede eliminar: la zona {zona.nombre} tiene equipos instalados activos.", "danger")
         return redirect(url_for("admin.zonas"))
     db.session.delete(zona)
     db.session.commit()
@@ -167,14 +150,40 @@ def eliminar_zona(id):
 @login_required
 @role_required(*_admin_roles)
 def equipos():
+    zona_id = request.args.get("zona_id", type=int)
     cliente_id = request.args.get("cliente_id", type=int)
+
     query = EquipoInstalado.query.filter_by(activo=True)
+    if zona_id:
+        query = query.filter_by(zona_id=zona_id)
     if cliente_id:
         query = query.filter_by(cliente_id=cliente_id)
     equipos = query.all()
-    clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
-    return render_template("admin/equipos.html", equipos=equipos,
-                           clientes=clientes, cliente_id=cliente_id)
+
+    if zona_id:
+        cliente_ids = db.session.query(EquipoInstalado.cliente_id).filter_by(
+            zona_id=zona_id, activo=True
+        ).distinct()
+        clientes = (Cliente.query
+                    .filter(Cliente.id.in_(cliente_ids), Cliente.activo == True)
+                    .order_by(Cliente.nombre).all())
+    else:
+        clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
+
+    if cliente_id:
+        zona_ids = db.session.query(EquipoInstalado.zona_id).filter_by(
+            cliente_id=cliente_id, activo=True
+        ).distinct()
+        zonas = Zona.query.filter(Zona.id.in_(zona_ids)).order_by(Zona.nombre).all()
+    else:
+        zonas = Zona.query.order_by(Zona.nombre).all()
+
+    return render_template("admin/equipos.html",
+                           equipos=equipos,
+                           zonas=zonas,
+                           clientes=clientes,
+                           zona_id=zona_id,
+                           cliente_id=cliente_id)
 
 
 @admin_bp.route("/equipos/nuevo", methods=["GET", "POST"])
@@ -183,16 +192,22 @@ def equipos():
 def nuevo_equipo():
     clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
     tipos_equipo = TipoEquipo.query.order_by(TipoEquipo.nombre).all()
+    zonas = Zona.query.order_by(Zona.nombre).all()
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
         tipo_equipo_id = request.form.get("tipo_equipo_id")
+        zona_id = request.form.get("zona_id")
         fecha_str = request.form.get("fecha_instalacion")
-        if not cliente_id or not tipo_equipo_id or not fecha_str:
-            flash("Cliente, tipo de equipo y fecha son obligatorios.", "danger")
-            return render_template("admin/equipo_form.html", clientes=clientes, tipos_equipo=tipos_equipo, equipo=None)
+        if not cliente_id or not tipo_equipo_id or not zona_id or not fecha_str:
+            flash("Cliente, zona, tipo de equipo y fecha son obligatorios.", "danger")
+            return render_template("admin/equipo_form.html",
+                                   clientes=clientes, tipos_equipo=tipos_equipo,
+                                   zonas=zonas, equipo=None)
         equipo = EquipoInstalado(
             cliente_id=int(cliente_id),
             tipo_equipo_id=int(tipo_equipo_id),
+            zona_id=int(zona_id),
+            sector=request.form.get("sector") or None,
             numero_serie=request.form.get("numero_serie"),
             fecha_instalacion=date.fromisoformat(fecha_str),
         )
@@ -200,7 +215,9 @@ def nuevo_equipo():
         db.session.commit()
         flash("Equipo registrado.", "success")
         return redirect(url_for("admin.equipos"))
-    return render_template("admin/equipo_form.html", clientes=clientes, tipos_equipo=tipos_equipo, equipo=None)
+    return render_template("admin/equipo_form.html",
+                           clientes=clientes, tipos_equipo=tipos_equipo,
+                           zonas=zonas, equipo=None)
 
 
 @admin_bp.route("/equipos/<int:id>/editar", methods=["GET", "POST"])
@@ -213,21 +230,29 @@ def editar_equipo(id):
         return redirect(url_for("admin.equipos"))
     clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
     tipos_equipo = TipoEquipo.query.order_by(TipoEquipo.nombre).all()
+    zonas = Zona.query.order_by(Zona.nombre).all()
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
         tipo_equipo_id = request.form.get("tipo_equipo_id")
+        zona_id = request.form.get("zona_id")
         fecha_str = request.form.get("fecha_instalacion")
-        if not cliente_id or not tipo_equipo_id or not fecha_str:
-            flash("Cliente, tipo de equipo y fecha son obligatorios.", "danger")
-            return render_template("admin/equipo_form.html", clientes=clientes, tipos_equipo=tipos_equipo, equipo=equipo)
+        if not cliente_id or not tipo_equipo_id or not zona_id or not fecha_str:
+            flash("Cliente, zona, tipo de equipo y fecha son obligatorios.", "danger")
+            return render_template("admin/equipo_form.html",
+                                   clientes=clientes, tipos_equipo=tipos_equipo,
+                                   zonas=zonas, equipo=equipo)
         equipo.cliente_id = int(cliente_id)
         equipo.tipo_equipo_id = int(tipo_equipo_id)
+        equipo.zona_id = int(zona_id)
+        equipo.sector = request.form.get("sector") or None
         equipo.numero_serie = request.form.get("numero_serie")
         equipo.fecha_instalacion = date.fromisoformat(fecha_str)
         db.session.commit()
         flash("Equipo actualizado.", "success")
         return redirect(url_for("admin.equipos"))
-    return render_template("admin/equipo_form.html", clientes=clientes, tipos_equipo=tipos_equipo, equipo=equipo)
+    return render_template("admin/equipo_form.html",
+                           clientes=clientes, tipos_equipo=tipos_equipo,
+                           zonas=zonas, equipo=equipo)
 
 
 @admin_bp.route("/equipos/<int:id>/eliminar", methods=["POST"])
