@@ -8,7 +8,7 @@
       {% if cliente %}Editar cliente{% else %}Nuevo cliente{% endif %}
     </h4>
 
-    <form method="POST">
+    <form method="POST" id="form-cliente">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="mb-3">
@@ -17,9 +17,29 @@
                value="{{ cliente.nombre if cliente else '' }}" required maxlength="150">
       </div>
 
+      <div class="row g-2 mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Tipo de ID <span class="text-danger">*</span></label>
+          <select name="tipo_identificador" id="tipo_identificador" class="form-select" required>
+            <option value="">Seleccionar...</option>
+            {% for tipo in tipos %}
+            <option value="{{ tipo }}"
+              {% if cliente and cliente.tipo_identificador == tipo %}selected
+              {% endif %}>{{ tipo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Número de identificación <span class="text-danger">*</span></label>
+          <input type="text" name="identificador" id="identificador" class="form-control"
+                 value="{{ cliente.identificador if cliente else '' }}" required maxlength="30">
+          <div class="form-text" id="id-hint"></div>
+        </div>
+      </div>
+
       <div class="mb-3">
         <label class="form-label">Teléfono</label>
-        <input type="text" name="telefono" class="form-control"
+        <input type="text" name="telefono" id="telefono" class="form-control"
                value="{{ cliente.telefono if cliente else '' }}"
                maxlength="20" pattern="[\+\d\-\s]+"
                title="Solo dígitos, espacios, guiones y + (código de país)">
@@ -48,4 +68,35 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const tipoSelect    = document.getElementById('tipo_identificador');
+const idInput       = document.getElementById('identificador');
+const telefonoInput = document.getElementById('telefono');
+const hint          = document.getElementById('id-hint');
+
+const hints = {
+  'Cédula':    '10 dígitos numéricos',
+  'RUC':       '13 dígitos numéricos',
+  'Pasaporte': 'Alfanumérico libre',
+  'Otro':      'Se generará un código automático si el campo está vacío',
+};
+
+tipoSelect.addEventListener('change', function () {
+  hint.textContent = hints[this.value] || '';
+  if (this.value === 'Otro' && !idInput.value) sugerirCodigo();
+});
+
+telefonoInput.addEventListener('blur', function () {
+  if (tipoSelect.value === 'Otro' && !idInput.value) sugerirCodigo();
+});
+
+function sugerirCodigo() {
+  fetch(`{{ url_for('admin.sugerir_codigo_otro') }}?telefono=${encodeURIComponent(telefonoInput.value)}`)
+    .then(r => r.json())
+    .then(data => { if (!idInput.value) idInput.value = data.codigo; });
+}
+</script>
 {% endblock %}

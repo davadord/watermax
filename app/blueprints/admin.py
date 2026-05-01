@@ -1,10 +1,10 @@
-from datetime import date
+from datetime import date, datetime
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required
 
 from app import db
-from app.models.client import Cliente, Zona
+from app.models.client import Cliente, Zona, TIPOS_IDENTIFICADOR
 from app.models.equipment import TipoEquipo, Componente, TipoEquipoComponente, EquipoInstalado
 from app.utils.decorators import role_required
 
@@ -33,8 +33,19 @@ def clientes():
 @role_required(*_admin_roles)
 def nuevo_cliente():
     if request.method == "POST":
+        error = _validar_identificador(
+            request.form.get("tipo_identificador"),
+            request.form.get("identificador", "").strip(),
+            exclude_id=None,
+        )
+        if error:
+            flash(error, "danger")
+            return render_template("admin/cliente_form.html", cliente=None,
+                                   tipos=TIPOS_IDENTIFICADOR)
         cliente = Cliente(
             nombre=request.form["nombre"],
+            tipo_identificador=request.form["tipo_identificador"],
+            identificador=request.form["identificador"].strip(),
             telefono=request.form.get("telefono"),
             direccion=request.form.get("direccion"),
             email=request.form.get("email"),
@@ -43,7 +54,7 @@ def nuevo_cliente():
         db.session.commit()
         flash(f"Cliente {cliente.nombre} registrado.", "success")
         return redirect(url_for("admin.clientes"))
-    return render_template("admin/cliente_form.html", cliente=None)
+    return render_template("admin/cliente_form.html", cliente=None, tipos=TIPOS_IDENTIFICADOR)
 
 
 @admin_bp.route("/clientes/<int:id>/editar", methods=["GET", "POST"])
@@ -55,14 +66,25 @@ def editar_cliente(id):
         flash("Cliente no encontrado.", "danger")
         return redirect(url_for("admin.clientes"))
     if request.method == "POST":
+        error = _validar_identificador(
+            request.form.get("tipo_identificador"),
+            request.form.get("identificador", "").strip(),
+            exclude_id=cliente.id,
+        )
+        if error:
+            flash(error, "danger")
+            return render_template("admin/cliente_form.html", cliente=cliente,
+                                   tipos=TIPOS_IDENTIFICADOR)
         cliente.nombre = request.form["nombre"]
+        cliente.tipo_identificador = request.form["tipo_identificador"]
+        cliente.identificador = request.form["identificador"].strip()
         cliente.telefono = request.form.get("telefono")
         cliente.direccion = request.form.get("direccion")
         cliente.email = request.form.get("email")
         db.session.commit()
         flash(f"Cliente {cliente.nombre} actualizado.", "success")
         return redirect(url_for("admin.clientes"))
-    return render_template("admin/cliente_form.html", cliente=cliente)
+    return render_template("admin/cliente_form.html", cliente=cliente, tipos=TIPOS_IDENTIFICADOR)
 
 
 @admin_bp.route("/clientes/<int:id>/eliminar", methods=["POST"])
@@ -81,6 +103,32 @@ def eliminar_cliente(id):
     db.session.commit()
     flash(f"Cliente {cliente.nombre} eliminado.", "success")
     return redirect(url_for("admin.clientes"))
+
+
+@admin_bp.route("/clientes/sugerir-codigo")
+@login_required
+def sugerir_codigo_otro():
+    telefono = request.args.get("telefono", "")
+    digitos = "".join(c for c in telefono if c.isdigit())
+    sufijo = digitos[-4:] if len(digitos) >= 4 else digitos.zfill(4)
+    hoy = datetime.now().strftime("%Y%m%d")
+    from flask import jsonify
+    return jsonify({"codigo": f"OTR-{sufijo}-{hoy}"})
+
+
+def _validar_identificador(tipo, valor, exclude_id):
+    if not tipo or not valor:
+        return "El tipo y número de identificación son obligatorios."
+    if tipo == "Cédula" and (not valor.isdigit() or len(valor) != 10):
+        return "La cédula debe tener exactamente 10 dígitos numéricos."
+    if tipo == "RUC" and (not valor.isdigit() or len(valor) != 13):
+        return "El RUC debe tener exactamente 13 dígitos numéricos."
+    q = Cliente.query.filter_by(identificador=valor)
+    if exclude_id:
+        q = q.filter(Cliente.id != exclude_id)
+    if q.first():
+        return f"Ya existe un cliente con el identificador {valor}."
+    return None
 
 
 # ── Zonas ─────────────────────────────────────────────────────────────────────

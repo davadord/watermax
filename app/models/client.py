@@ -13,11 +13,16 @@ class Zona(db.Model):
         return f"<Zona {self.nombre}>"
 
 
+TIPOS_IDENTIFICADOR = ["Cédula", "RUC", "Pasaporte", "Otro"]
+
+
 class Cliente(db.Model):
     __tablename__ = "clientes"
 
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(150), nullable=False)
+    tipo_identificador = db.Column(db.Enum("Cédula", "RUC", "Pasaporte", "Otro"), nullable=False)
+    identificador = db.Column(db.String(30), nullable=False, unique=True)
     telefono = db.Column(db.String(20))
     direccion = db.Column(db.String(250))
     email = db.Column(db.String(120))

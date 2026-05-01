@@ -29,9 +29,9 @@
     <thead class="table-light">
       <tr>
         <th>Nombre</th>
+        <th>Identificación</th>
         <th>Teléfono</th>
         <th>Dirección</th>
-        <th>Email</th>
         <th></th>
       </tr>
     </thead>
@@ -39,9 +39,9 @@
       {% for cliente in clientes %}
       <tr>
         <td>{{ cliente.nombre }}</td>
+        <td><span class="text-muted small">{{ cliente.tipo_identificador }}</span><br>{{ cliente.identificador }}</td>
         <td>{{ cliente.telefono or '—' }}</td>
         <td>{{ cliente.direccion or '—' }}</td>
-        <td>{{ cliente.email or '—' }}</td>
         <td class="text-end">
           <a href="{{ url_for('admin.editar_cliente', id=cliente.id) }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-pencil"></i>
