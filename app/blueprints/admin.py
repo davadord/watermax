@@ -19,8 +19,13 @@ _admin_roles = ("propietario", "administrativo")
 @login_required
 @role_required(*_admin_roles)
 def clientes():
-    clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
-    return render_template("admin/clientes.html", clientes=clientes)
+    zona_id = request.args.get("zona_id", type=int)
+    zonas = Zona.query.order_by(Zona.nombre).all()
+    q = Cliente.query.filter_by(activo=True)
+    if zona_id:
+        q = q.join(Cliente.equipos).filter(EquipoInstalado.zona_id == zona_id, EquipoInstalado.activo == True)
+    clientes = q.order_by(Cliente.nombre).all()
+    return render_template("admin/clientes.html", clientes=clientes, zonas=zonas, zona_id=zona_id)
 
 
 @admin_bp.route("/clientes/nuevo", methods=["GET", "POST"])
