@@ -5,7 +5,7 @@ from flask_login import login_required
 
 from app import db
 from app.models.client import Cliente, Zona
-from app.models.equipment import TipoEquipo, EquipoInstalado
+from app.models.equipment import TipoEquipo, Componente, TipoEquipoComponente, EquipoInstalado
 from app.utils.decorators import role_required
 
 admin_bp = Blueprint("admin", __name__)
@@ -147,6 +147,159 @@ def eliminar_zona(id):
     db.session.commit()
     flash(f"Zona {zona.nombre} eliminada.", "success")
     return redirect(url_for("admin.zonas"))
+
+
+# ── Tipos de Equipo ───────────────────────────────────────────────────────────
+
+@admin_bp.route("/tipos-equipo")
+@login_required
+@role_required(*_admin_roles)
+def tipos_equipo():
+    tipos = TipoEquipo.query.order_by(TipoEquipo.nombre).all()
+    return render_template("admin/tipos_equipo.html", tipos=tipos)
+
+
+@admin_bp.route("/tipos-equipo/nuevo", methods=["GET", "POST"])
+@login_required
+@role_required(*_admin_roles)
+def nuevo_tipo_equipo():
+    componentes = Componente.query.order_by(Componente.nombre).all()
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        if not nombre:
+            flash("El nombre es obligatorio.", "danger")
+            return render_template("admin/tipo_equipo_form.html", tipo=None, componentes=componentes)
+        tipo = TipoEquipo(
+            nombre=nombre,
+            marca=request.form.get("marca") or None,
+            descripcion=request.form.get("descripcion") or None,
+        )
+        db.session.add(tipo)
+        db.session.flush()
+        _guardar_componentes(tipo, request.form, componentes)
+        db.session.commit()
+        flash(f"Tipo de equipo {tipo.nombre} creado.", "success")
+        return redirect(url_for("admin.tipos_equipo"))
+    return render_template("admin/tipo_equipo_form.html", tipo=None, componentes=componentes)
+
+
+@admin_bp.route("/tipos-equipo/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@role_required(*_admin_roles)
+def editar_tipo_equipo(id):
+    tipo = db.session.get(TipoEquipo, id)
+    if not tipo:
+        flash("Tipo de equipo no encontrado.", "danger")
+        return redirect(url_for("admin.tipos_equipo"))
+    componentes = Componente.query.order_by(Componente.nombre).all()
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        if not nombre:
+            flash("El nombre es obligatorio.", "danger")
+            return render_template("admin/tipo_equipo_form.html", tipo=tipo, componentes=componentes)
+        tipo.nombre = nombre
+        tipo.marca = request.form.get("marca") or None
+        tipo.descripcion = request.form.get("descripcion") or None
+        TipoEquipoComponente.query.filter_by(tipo_equipo_id=tipo.id).delete()
+        _guardar_componentes(tipo, request.form, componentes)
+        db.session.commit()
+        flash(f"Tipo de equipo {tipo.nombre} actualizado.", "success")
+        return redirect(url_for("admin.tipos_equipo"))
+    return render_template("admin/tipo_equipo_form.html", tipo=tipo, componentes=componentes)
+
+
+@admin_bp.route("/tipos-equipo/<int:id>/eliminar", methods=["POST"])
+@login_required
+@role_required(*_admin_roles)
+def eliminar_tipo_equipo(id):
+    tipo = db.session.get(TipoEquipo, id)
+    if not tipo:
+        flash("Tipo de equipo no encontrado.", "danger")
+        return redirect(url_for("admin.tipos_equipo"))
+    if tipo.equipos:
+        flash(f"No se puede eliminar: {tipo.nombre} tiene equipos instalados asociados.", "danger")
+        return redirect(url_for("admin.tipos_equipo"))
+    db.session.delete(tipo)
+    db.session.commit()
+    flash(f"Tipo de equipo {tipo.nombre} eliminado.", "success")
+    return redirect(url_for("admin.tipos_equipo"))
+
+
+def _guardar_componentes(tipo, form, componentes):
+    seleccionados = form.getlist("componente_ids")
+    for comp in componentes:
+        if str(comp.id) in seleccionados:
+            db.session.add(TipoEquipoComponente(
+                tipo_equipo_id=tipo.id,
+                componente_id=comp.id,
+            ))
+
+
+# ── Componentes ───────────────────────────────────────────────────────────────
+
+@admin_bp.route("/componentes")
+@login_required
+@role_required(*_admin_roles)
+def componentes():
+    comps = Componente.query.order_by(Componente.nombre).all()
+    return render_template("admin/componentes.html", componentes=comps)
+
+
+@admin_bp.route("/componentes/nuevo", methods=["GET", "POST"])
+@login_required
+@role_required(*_admin_roles)
+def nuevo_componente():
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        if not nombre:
+            flash("El nombre es obligatorio.", "danger")
+            return render_template("admin/componente_form.html", componente=None)
+        comp = Componente(
+            nombre=nombre,
+            descripcion=request.form.get("descripcion") or None,
+            intervalo_nominal=int(request.form.get("intervalo_nominal")),
+        )
+        db.session.add(comp)
+        db.session.commit()
+        flash(f"Componente {comp.nombre} creado.", "success")
+        return redirect(url_for("admin.componentes"))
+    return render_template("admin/componente_form.html", componente=None)
+
+
+@admin_bp.route("/componentes/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@role_required(*_admin_roles)
+def editar_componente(id):
+    comp = db.session.get(Componente, id)
+    if not comp:
+        flash("Componente no encontrado.", "danger")
+        return redirect(url_for("admin.componentes"))
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        if not nombre:
+            flash("El nombre es obligatorio.", "danger")
+            return render_template("admin/componente_form.html", componente=comp)
+        comp.nombre = nombre
+        comp.descripcion = request.form.get("descripcion") or None
+        comp.intervalo_nominal = int(request.form.get("intervalo_nominal"))
+        db.session.commit()
+        flash(f"Componente {comp.nombre} actualizado.", "success")
+        return redirect(url_for("admin.componentes"))
+    return render_template("admin/componente_form.html", componente=comp)
+
+
+@admin_bp.route("/componentes/<int:id>/eliminar", methods=["POST"])
+@login_required
+@role_required(*_admin_roles)
+def eliminar_componente(id):
+    comp = db.session.get(Componente, id)
+    if not comp:
+        flash("Componente no encontrado.", "danger")
+        return redirect(url_for("admin.componentes"))
+    db.session.delete(comp)
+    db.session.commit()
+    flash(f"Componente {comp.nombre} eliminado.", "success")
+    return redirect(url_for("admin.componentes"))
 
 
 # ── Equipos ───────────────────────────────────────────────────────────────────

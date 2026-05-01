@@ -15,10 +15,21 @@
     <a class="navbar-brand fw-bold" href="{{ url_for('reports.dashboard') }}">
       <i class="bi bi-droplet-fill"></i> Watermax
     </a>
-    <div class="navbar-nav ms-auto">
+    <div class="navbar-nav ms-auto align-items-center">
       <a class="nav-link text-white" href="{{ url_for('admin.clientes') }}">Clientes</a>
-      <a class="nav-link text-white" href="{{ url_for('admin.zonas') }}">Zonas</a>
       <a class="nav-link text-white" href="{{ url_for('admin.equipos') }}">Equipos</a>
+
+      <div class="nav-item dropdown">
+        <a class="nav-link text-white dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          Configuración
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ url_for('admin.zonas') }}">Zonas</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('admin.tipos_equipo') }}">Tipos de equipo</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('admin.componentes') }}">Componentes</a></li>
+        </ul>
+      </div>
+
       <a class="nav-link text-white" href="{{ url_for('reports.dashboard') }}">Dashboard</a>
       <a class="nav-link text-white" href="{{ url_for('auth.logout') }}">
         <i class="bi bi-box-arrow-right"></i> Salir

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Componentes — Watermax{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4><i class="bi bi-tools text-primary"></i> Componentes</h4>
+  <a href="{{ url_for('admin.nuevo_componente') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Nuevo componente
+  </a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Intervalo (meses)</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for comp in componentes %}
+      <tr>
+        <td>{{ comp.nombre }}</td>
+        <td>{{ comp.descripcion or '—' }}</td>
+        <td>{{ comp.intervalo_nominal }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('admin.editar_componente', id=comp.id) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <form method="POST" action="{{ url_for('admin.eliminar_componente', id=comp.id) }}" class="d-inline"
+                onsubmit="return confirm('¿Eliminar el componente {{ comp.nombre }}?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4" class="text-center text-muted py-4">No hay componentes registrados.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -6,7 +6,6 @@ de ciclos reales del historial de intervenciones.
 from datetime import date, timedelta
 from statistics import mean, stdev
 from app.models.maintenance import DetalleMantenimiento, Mantenimiento
-from app.models.equipment import TipoEquipoComponente
 
 
 URGENCIA_VENCIDO = "vencido"
@@ -27,7 +26,7 @@ def calcular_vencimientos(equipo):
 
     for tec in equipo.tipo_equipo.componentes:
         comp = tec.componente
-        intervalo_nominal = tec.intervalo_nominal  # meses
+        intervalo_nominal = comp.intervalo_nominal  # meses
 
         # Obtener historial real de este componente en este equipo
         historial = (

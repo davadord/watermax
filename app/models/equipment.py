@@ -18,18 +18,16 @@ class Componente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.String(200))
-    unidad = db.Column(db.String(20), default="meses")
+    intervalo_nominal = db.Column(db.Integer, nullable=False)
     tipos_equipo = db.relationship("TipoEquipoComponente", backref="componente", lazy=True)
 
 
 class TipoEquipoComponente(db.Model):
-    """Tabla de unión N:M con intervalo nominal por combinación."""
     __tablename__ = "tipo_equipo_componente"
 
     id = db.Column(db.Integer, primary_key=True)
     tipo_equipo_id = db.Column(db.Integer, db.ForeignKey("tipos_equipo.id"), nullable=False)
     componente_id = db.Column(db.Integer, db.ForeignKey("componentes.id"), nullable=False)
-    intervalo_nominal = db.Column(db.Integer, nullable=False)
 
 
 class EquipoInstalado(db.Model):

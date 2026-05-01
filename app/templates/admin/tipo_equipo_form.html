@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{% if tipo %}Editar tipo{% else %}Nuevo tipo{% endif %} — Watermax{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <h4 class="mb-4">
+      <i class="bi bi-cpu-fill text-primary"></i>
+      {% if tipo %}Editar tipo de equipo{% else %}Nuevo tipo de equipo{% endif %}
+    </h4>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+        <input type="text" name="nombre" class="form-control"
+               value="{{ tipo.nombre if tipo else '' }}" required maxlength="100">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Marca</label>
+        <input type="text" name="marca" class="form-control"
+               value="{{ tipo.marca if tipo else '' }}" maxlength="80">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Descripción</label>
+        <input type="text" name="descripcion" class="form-control"
+               value="{{ tipo.descripcion if tipo else '' }}" maxlength="250">
+      </div>
+
+      {% if componentes %}
+      <hr>
+      <h6 class="mb-3">Componentes</h6>
+      {% set ids_asociados = tipo.componentes | map(attribute='componente_id') | list if tipo else [] %}
+      <div class="row g-2">
+        {% for comp in componentes %}
+        <div class="col-md-6">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="componente_ids"
+                   value="{{ comp.id }}" id="comp_{{ comp.id }}"
+                   {% if comp.id in ids_asociados %}checked{% endif %}>
+            <label class="form-check-label" for="comp_{{ comp.id }}">
+              {{ comp.nombre }}
+              <span class="text-muted small">({{ comp.intervalo_nominal }} meses)</span>
+            </label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <hr>
+      <p class="text-muted small">No hay componentes registrados. <a href="{{ url_for('admin.nuevo_componente') }}">Crear uno</a>.</p>
+      {% endif %}
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg"></i> Guardar
+        </button>
+        <a href="{{ url_for('admin.tipos_equipo') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

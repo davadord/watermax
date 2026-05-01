@@ -14,7 +14,7 @@
       <tr>
         <th>Nombre</th>
         <th>Descripción</th>
-        <th>Clientes</th>
+        <th>Equipos activos</th>
         <th></th>
       </tr>
     </thead>
@@ -23,7 +23,7 @@
       <tr>
         <td>{{ zona.nombre }}</td>
         <td>{{ zona.descripcion or '—' }}</td>
-        <td>{{ zona.clientes | selectattr('activo') | list | length }}</td>
+        <td>{{ zona.equipos | selectattr('activo') | list | length }}</td>
         <td class="text-end">
           <a href="{{ url_for('admin.editar_zona', id=zona.id) }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-pencil"></i>
