@@ -25,10 +25,10 @@ def create_app(config_name="default"):
     migrate.init_app(app, db)
     csrf.init_app(app)
 
-    from app.controllers.auth import auth_bp
-    from app.controllers.admin import admin_bp
-    from app.controllers.maintenance import maintenance_bp
-    from app.controllers.reports import reports_bp
+    from app.blueprints.auth import auth_bp
+    from app.blueprints.admin import admin_bp
+    from app.blueprints.maintenance import maintenance_bp
+    from app.blueprints.reports import reports_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(admin_bp, url_prefix="/admin")
