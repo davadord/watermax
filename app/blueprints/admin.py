@@ -167,8 +167,14 @@ def eliminar_zona(id):
 @login_required
 @role_required(*_admin_roles)
 def equipos():
-    equipos = EquipoInstalado.query.filter_by(activo=True).all()
-    return render_template("admin/equipos.html", equipos=equipos)
+    cliente_id = request.args.get("cliente_id", type=int)
+    query = EquipoInstalado.query.filter_by(activo=True)
+    if cliente_id:
+        query = query.filter_by(cliente_id=cliente_id)
+    equipos = query.all()
+    clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
+    return render_template("admin/equipos.html", equipos=equipos,
+                           clientes=clientes, cliente_id=cliente_id)
 
 
 @admin_bp.route("/equipos/nuevo", methods=["GET", "POST"])
@@ -231,6 +237,9 @@ def eliminar_equipo(id):
     equipo = db.session.get(EquipoInstalado, id)
     if not equipo or not equipo.activo:
         flash("Equipo no encontrado.", "danger")
+        return redirect(url_for("admin.equipos"))
+    if equipo.mantenimientos:
+        flash("No se puede eliminar: el equipo tiene historial de mantenimiento.", "danger")
         return redirect(url_for("admin.equipos"))
     equipo.activo = False
     db.session.commit()

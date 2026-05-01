@@ -8,6 +8,17 @@
   </a>
 </div>
 
+<form class="row g-2 mb-3" method="GET">
+  <div class="col-auto">
+    <select name="cliente_id" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">Todos los clientes</option>
+      {% for cliente in clientes %}
+        <option value="{{ cliente.id }}" {% if cliente_id == cliente.id %}selected{% endif %}>{{ cliente.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
 <div class="table-responsive">
   <table class="table table-hover align-middle">
     <thead class="table-light">
