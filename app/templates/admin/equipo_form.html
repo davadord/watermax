@@ -65,6 +65,7 @@
       <div class="mb-3">
         <label class="form-label">Fecha de instalación <span class="text-danger">*</span></label>
         <input type="date" name="fecha_instalacion" class="form-control" required
+               max="{{ today }}"
                value="{{ equipo.fecha_instalacion.strftime('%Y-%m-%d') if equipo else '' }}">
       </div>
 

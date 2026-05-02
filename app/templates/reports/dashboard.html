@@ -37,7 +37,6 @@
             <th>Fecha proyectada</th>
             <th>Días restantes</th>
             <th>Estado</th>
-            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -56,16 +55,16 @@
               {% endif %}
               <small class="text-muted ms-1">({{ v.fuente }})</small>
             </td>
-            <td>
-              <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=item.equipo.id) }}"
-                 class="btn btn-sm btn-outline-primary">
-                Registrar
-              </a>
-            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
+    <div class="card-footer text-end">
+      <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=item.equipo.id) }}"
+         class="btn btn-sm btn-primary">
+        <i class="bi bi-clipboard2-plus"></i> Registrar mantenimiento
+      </a>
     </div>
   </div>
 {% endfor %}

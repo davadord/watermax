@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Nuevo mantenimiento — Watermax{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h4 class="mb-1">
+      <i class="bi bi-clipboard2-pulse text-primary"></i> Registrar mantenimiento
+    </h4>
+    <p class="text-muted mb-4">
+      {{ equipo.tipo_equipo.nombre }}
+      {% if equipo.tipo_equipo.marca %} — {{ equipo.tipo_equipo.marca }}{% endif %}
+      · {{ equipo.cliente.nombre }}
+      {% if equipo.numero_serie %}<small class="ms-1">(S/N: {{ equipo.numero_serie }})</small>{% endif %}
+    </p>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Fecha <span class="text-danger">*</span></label>
+          <input type="date" name="fecha" class="form-control" required
+                 value="{{ hoy.strftime('%Y-%m-%d') }}" max="{{ hoy.strftime('%Y-%m-%d') }}">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Observaciones generales</label>
+          <input type="text" name="observaciones" class="form-control" maxlength="500"
+                 placeholder="Condiciones del equipo, acceso, novedades…">
+        </div>
+      </div>
+
+      <h6 class="mt-4 mb-3">Componentes intervenidos</h6>
+      <p class="text-muted small">Selecciona acción solo para los componentes atendidos en esta orden.</p>
+
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Componente</th>
+              <th style="width:200px">Acción</th>
+              <th>Notas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for comp in componentes %}
+            <tr>
+              <td>
+                <strong>{{ comp.nombre }}</strong>
+                <div class="text-muted small">Intervalo nominal: {{ comp.intervalo_nominal }} mes{{ 'es' if comp.intervalo_nominal != 1 else '' }}</div>
+              </td>
+              <td>
+                <select name="accion_{{ comp.id }}" class="form-select form-select-sm">
+                  <option value="">— sin intervención —</option>
+                  <option value="reemplazo">Reemplazo</option>
+                  <option value="limpieza">Limpieza</option>
+                  <option value="revision">Revisión</option>
+                </select>
+              </td>
+              <td>
+                <input type="text" name="notas_{{ comp.id }}" class="form-control form-control-sm"
+                       maxlength="200" placeholder="Opcional">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg"></i> Guardar mantenimiento
+        </button>
+        <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

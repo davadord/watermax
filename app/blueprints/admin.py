@@ -408,14 +408,20 @@ def nuevo_equipo():
             flash("Cliente, zona, tipo de equipo y fecha son obligatorios.", "danger")
             return render_template("admin/equipo_form.html",
                                    clientes=clientes, tipos_equipo=tipos_equipo,
-                                   zonas=zonas, equipo=None)
+                                   zonas=zonas, equipo=None, today=date.today())
+        fecha_instalacion = date.fromisoformat(fecha_str)
+        if fecha_instalacion > date.today():
+            flash("La fecha de instalación no puede ser futura.", "danger")
+            return render_template("admin/equipo_form.html",
+                                   clientes=clientes, tipos_equipo=tipos_equipo,
+                                   zonas=zonas, equipo=None, today=date.today())
         equipo = EquipoInstalado(
             cliente_id=int(cliente_id),
             tipo_equipo_id=int(tipo_equipo_id),
             zona_id=int(zona_id),
             sector=request.form.get("sector") or None,
             numero_serie=request.form.get("numero_serie"),
-            fecha_instalacion=date.fromisoformat(fecha_str),
+            fecha_instalacion=fecha_instalacion,
         )
         db.session.add(equipo)
         db.session.commit()
@@ -423,7 +429,7 @@ def nuevo_equipo():
         return redirect(url_for("admin.equipos"))
     return render_template("admin/equipo_form.html",
                            clientes=clientes, tipos_equipo=tipos_equipo,
-                           zonas=zonas, equipo=None)
+                           zonas=zonas, equipo=None, today=date.today())
 
 
 @admin_bp.route("/equipos/<int:id>/editar", methods=["GET", "POST"])
@@ -446,19 +452,25 @@ def editar_equipo(id):
             flash("Cliente, zona, tipo de equipo y fecha son obligatorios.", "danger")
             return render_template("admin/equipo_form.html",
                                    clientes=clientes, tipos_equipo=tipos_equipo,
-                                   zonas=zonas, equipo=equipo)
+                                   zonas=zonas, equipo=equipo, today=date.today())
+        fecha_instalacion = date.fromisoformat(fecha_str)
+        if fecha_instalacion > date.today():
+            flash("La fecha de instalación no puede ser futura.", "danger")
+            return render_template("admin/equipo_form.html",
+                                   clientes=clientes, tipos_equipo=tipos_equipo,
+                                   zonas=zonas, equipo=equipo, today=date.today())
         equipo.cliente_id = int(cliente_id)
         equipo.tipo_equipo_id = int(tipo_equipo_id)
         equipo.zona_id = int(zona_id)
         equipo.sector = request.form.get("sector") or None
         equipo.numero_serie = request.form.get("numero_serie")
-        equipo.fecha_instalacion = date.fromisoformat(fecha_str)
+        equipo.fecha_instalacion = fecha_instalacion
         db.session.commit()
         flash("Equipo actualizado.", "success")
         return redirect(url_for("admin.equipos"))
     return render_template("admin/equipo_form.html",
                            clientes=clientes, tipos_equipo=tipos_equipo,
-                           zonas=zonas, equipo=equipo)
+                           zonas=zonas, equipo=equipo, today=date.today())
 
 
 @admin_bp.route("/equipos/<int:id>/eliminar", methods=["POST"])

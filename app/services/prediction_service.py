@@ -4,7 +4,7 @@ Combina el intervalo nominal del fabricante con el promedio
 de ciclos reales del historial de intervenciones.
 """
 from datetime import date, timedelta
-from statistics import mean, stdev
+from statistics import mean
 from app.models.maintenance import DetalleMantenimiento, Mantenimiento
 
 
@@ -28,7 +28,7 @@ def calcular_vencimientos(equipo):
         comp = tec.componente
         intervalo_nominal = comp.intervalo_nominal  # meses
 
-        # Obtener historial real de este componente en este equipo
+        # Solo reemplazo resetea el reloj — limpieza y revision no cuentan
         historial = (
             DetalleMantenimiento.query
             .join(Mantenimiento)
@@ -36,6 +36,7 @@ def calcular_vencimientos(equipo):
                 Mantenimiento.equipo_id == equipo.id,
                 Mantenimiento.completado == True,
                 DetalleMantenimiento.componente_id == comp.id,
+                DetalleMantenimiento.accion == "reemplazo",
             )
             .order_by(Mantenimiento.fecha)
             .all()
@@ -82,3 +83,41 @@ def calcular_vencimientos(equipo):
     orden = {URGENCIA_VENCIDO: 0, URGENCIA_PROXIMO: 1, URGENCIA_EN_PLAZO: 2}
     resultados.sort(key=lambda x: (orden[x["urgencia"]], x["dias_restantes"]))
     return resultados
+
+
+def calcular_proximo_componente(equipo, componente, fecha_intervencion):
+    """
+    Calcula la fecha de próximo mantenimiento para un componente específico
+    al momento de registrar una intervención. Excluye la intervención actual
+    (aún no commiteada) del cálculo del promedio histórico.
+
+    Retorna un objeto date.
+    """
+    intervalo_nominal_dias = componente.intervalo_nominal * 30
+
+    historial = (
+        DetalleMantenimiento.query
+        .join(Mantenimiento)
+        .filter(
+            Mantenimiento.equipo_id == equipo.id,
+            Mantenimiento.completado == True,
+            DetalleMantenimiento.componente_id == componente.id,
+            DetalleMantenimiento.accion == "reemplazo",
+        )
+        .order_by(Mantenimiento.fecha)
+        .all()
+    )
+
+    fechas = [d.mantenimiento.fecha for d in historial]
+
+    intervalo_dias = intervalo_nominal_dias
+    if len(fechas) >= 2:
+        ciclos_dias = [
+            (fechas[i + 1] - fechas[i]).days
+            for i in range(len(fechas) - 1)
+        ]
+        intervalo_real = int(mean(ciclos_dias))
+        if abs(intervalo_real - intervalo_nominal_dias) / intervalo_nominal_dias <= 0.5:
+            intervalo_dias = intervalo_real
+
+    return fecha_intervencion + timedelta(days=intervalo_dias)
