@@ -55,6 +55,9 @@
         <td>{{ equipo.sector or '—' }}</td>
         <td>{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
         <td class="text-end">
+          <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}" class="btn btn-outline-primary btn-sm" title="Ver historial">
+            <i class="bi bi-clock-history"></i>
+          </a>
           <a href="{{ url_for('admin.editar_equipo', id=equipo.id) }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-pencil"></i>
           </a>

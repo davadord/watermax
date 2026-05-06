@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Historial — {{ equipo.tipo_equipo.nombre }} · {{ equipo.cliente.nombre }} — Watermax{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-1">
+  <div>
+    <h4><i class="bi bi-clock-history text-primary"></i> Historial de mantenimiento</h4>
+    <p class="text-muted mb-0">
+      {{ equipo.tipo_equipo.nombre }} · {{ equipo.cliente.nombre }} · {{ equipo.zona.nombre }}
+      {% if equipo.numero_serie %}<span class="ms-1">· N.° {{ equipo.numero_serie }}</span>{% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.equipos') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Equipos
+    </a>
+    <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Registrar mantenimiento
+    </a>
+  </div>
+</div>
+
+<hr class="mt-2 mb-3">
+
+{% if paginacion.total == 0 %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+  Sin mantenimientos registrados para este equipo.
+</div>
+{% else %}
+<p class="text-muted small mb-2">{{ paginacion.total }} registro{% if paginacion.total != 1 %}s{% endif %}</p>
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Fecha</th>
+        <th>Técnico</th>
+        <th>Componentes atendidos</th>
+        <th>Próximo programado</th>
+        <th>Observaciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mant in paginacion.items %}
+      <tr>
+        <td class="text-nowrap">{{ mant.fecha.strftime('%d/%m/%Y') }}</td>
+        <td>{{ mant.tecnico.nombre }}</td>
+        <td>
+          {% for d in mant.detalles %}
+          <span class="badge me-1 mb-1
+            {% if d.accion == 'reemplazo' %}bg-success
+            {% elif d.accion == 'limpieza' %}bg-info text-dark
+            {% else %}bg-secondary{% endif %}">
+            {{ d.componente.nombre }}
+            <small class="ms-1 fw-normal">({{ d.accion }})</small>
+          </span>
+          {% endfor %}
+        </td>
+        <td class="text-nowrap">
+          {% set proximos = mant.detalles | selectattr('proximo_mantenimiento') | map(attribute='proximo_mantenimiento') | list %}
+          {% if proximos %}{{ (proximos | min).strftime('%d/%m/%Y') }}{% else %}—{% endif %}
+        </td>
+        <td>{{ mant.observaciones or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if paginacion.pages > 1 %}
+<nav>
+  <ul class="pagination pagination-sm justify-content-center">
+    <li class="page-item {% if not paginacion.has_prev %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ paginacion.prev_num }}">&#8249;</a>
+    </li>
+    {% for p in paginacion.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+      <li class="page-item {% if p == paginacion.page %}active{% endif %}">
+        <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item {% if not paginacion.has_next %}disabled{% endif %}">
+      <a class="page-link" href="?page={{ paginacion.next_num }}">&#8250;</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endif %}
+{% endblock %}

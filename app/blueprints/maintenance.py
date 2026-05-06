@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import date
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app import db
 from app.models.maintenance import Mantenimiento, DetalleMantenimiento
@@ -64,7 +66,7 @@ def nuevo_mantenimiento(equipo_id):
                 db.session.add(d)
             db.session.commit()
             flash("Mantenimiento registrado correctamente.", "success")
-            return redirect(url_for("reports.dashboard"))
+            return redirect(url_for("maintenance.historial_equipo", equipo_id=equipo.id))
 
         except Exception:
             db.session.rollback()
@@ -77,3 +79,22 @@ def nuevo_mantenimiento(equipo_id):
         componentes=componentes,
         hoy=date.today(),
     )
+
+
+@maintenance_bp.route("/equipo/<int:equipo_id>")
+@login_required
+@role_required(*_all_roles)
+def historial_equipo(equipo_id):
+    equipo = db.get_or_404(EquipoInstalado, equipo_id)
+    page = request.args.get("page", 1, type=int)
+    stmt = (
+        select(Mantenimiento)
+        .where(Mantenimiento.equipo_id == equipo_id)
+        .order_by(Mantenimiento.fecha.desc())
+        .options(
+            selectinload(Mantenimiento.detalles).selectinload(DetalleMantenimiento.componente),
+            selectinload(Mantenimiento.tecnico),
+        )
+    )
+    paginacion = db.paginate(stmt, page=page, per_page=20, error_out=False)
+    return render_template("maintenance/equipo.html", equipo=equipo, paginacion=paginacion)
