@@ -65,7 +65,7 @@ def calcular_vencimientos(equipo):
 
         if dias_restantes < 0:
             urgencia = URGENCIA_VENCIDO
-        elif dias_restantes <= 7:
+        elif dias_restantes <= 15:
             urgencia = URGENCIA_PROXIMO
         else:
             urgencia = URGENCIA_EN_PLAZO

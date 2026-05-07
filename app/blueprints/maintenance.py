@@ -2,11 +2,12 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import date
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from app import db
 from app.models.maintenance import Mantenimiento, DetalleMantenimiento
 from app.models.equipment import EquipoInstalado
+from app.models.client import Cliente
 from app.services.prediction_service import calcular_proximo_componente
 from app.utils.decorators import role_required
 
@@ -78,6 +79,38 @@ def nuevo_mantenimiento(equipo_id):
         equipo=equipo,
         componentes=componentes,
         hoy=date.today(),
+    )
+
+
+@maintenance_bp.route("/cliente/<int:cliente_id>")
+@login_required
+@role_required(*_all_roles)
+def historial_cliente(cliente_id):
+    cliente = db.get_or_404(Cliente, cliente_id)
+    equipos = (
+        db.session.execute(
+            select(EquipoInstalado)
+            .where(EquipoInstalado.cliente_id == cliente_id)
+            .options(
+                joinedload(EquipoInstalado.tipo_equipo),
+                joinedload(EquipoInstalado.zona),
+                joinedload(EquipoInstalado.mantenimientos)
+                .selectinload(Mantenimiento.detalles)
+                .selectinload(DetalleMantenimiento.componente),
+                joinedload(EquipoInstalado.mantenimientos)
+                .selectinload(Mantenimiento.tecnico),
+            )
+        )
+        .unique()
+        .scalars()
+        .all()
+    )
+    hoy = date.today()
+    return render_template(
+        "maintenance/cliente.html",
+        cliente=cliente,
+        equipos=equipos,
+        hoy=hoy,
     )
 
 

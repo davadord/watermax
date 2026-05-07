@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Historial — {{ cliente.nombre }} — Watermax{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-1">
+  <div>
+    <h4><i class="bi bi-clock-history text-primary"></i> Historial por cliente</h4>
+    <p class="text-muted mb-0">
+      {{ cliente.nombre }} · <span class="small">{{ cliente.tipo_identificador }} {{ cliente.identificador }}</span>
+    </p>
+  </div>
+  <a href="{{ url_for('admin.clientes') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Clientes
+  </a>
+</div>
+
+<hr class="mt-2 mb-3">
+
+{% if not equipos %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+  Este cliente no tiene equipos instalados.
+</div>
+{% else %}
+{% for equipo in equipos %}
+{% set mantenimientos = equipo.mantenimientos | sort(attribute='fecha', reverse=True) %}
+{% set vencimientos = [] %}
+{% for m in mantenimientos %}
+  {% for d in m.detalles %}
+    {% if d.proximo_mantenimiento %}
+      {% set _ = vencimientos.append(d.proximo_mantenimiento) %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+{% set proximo = (vencimientos | min) if vencimientos else none %}
+{% set vencido = proximo and proximo < hoy %}
+{% set por_vencer = proximo and not vencido and (proximo - hoy).days <= 15 %}
+
+<div class="card mb-3 {% if vencido %}border-danger{% elif por_vencer %}border-warning{% endif %}">
+  <div class="card-header d-flex justify-content-between align-items-center
+    {% if vencido %}bg-danger bg-opacity-10{% elif por_vencer %}bg-warning bg-opacity-10{% endif %}">
+    <div>
+      <strong>{{ equipo.tipo_equipo.nombre }}</strong>
+      <span class="text-muted ms-2 small">{{ equipo.zona.nombre }}{% if equipo.sector %} · {{ equipo.sector }}{% endif %}{% if equipo.numero_serie %} · N.° {{ equipo.numero_serie }}{% endif %}</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      {% if vencido %}
+      <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Vencido {{ proximo.strftime('%d/%m/%Y') }}</span>
+      {% elif por_vencer %}
+      <span class="badge bg-warning text-dark"><i class="bi bi-clock-fill me-1"></i>Vence {{ proximo.strftime('%d/%m/%Y') }}</span>
+      {% elif proximo %}
+      <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Próximo {{ proximo.strftime('%d/%m/%Y') }}</span>
+      {% endif %}
+      <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list-ul"></i> Ver historial
+      </a>
+      <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Registrar
+      </a>
+    </div>
+  </div>
+
+  {% if mantenimientos %}
+  <div class="table-responsive">
+    <table class="table table-hover table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Fecha</th>
+          <th>Técnico</th>
+          <th>Componentes atendidos</th>
+          <th>Próximo programado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mant in mantenimientos[:5] %}
+        <tr>
+          <td class="text-nowrap">{{ mant.fecha.strftime('%d/%m/%Y') }}</td>
+          <td>{{ mant.tecnico.nombre }}</td>
+          <td>
+            {% for d in mant.detalles %}
+            <span class="badge me-1
+              {% if d.accion == 'reemplazo' %}bg-success
+              {% elif d.accion == 'limpieza' %}bg-info text-dark
+              {% else %}bg-secondary{% endif %}">
+              {{ d.componente.nombre }} <small class="fw-normal">({{ d.accion }})</small>
+            </span>
+            {% endfor %}
+          </td>
+          <td class="text-nowrap">
+            {% set proximos = mant.detalles | selectattr('proximo_mantenimiento') | map(attribute='proximo_mantenimiento') | list %}
+            {% if proximos %}{{ (proximos | min).strftime('%d/%m/%Y') }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if mantenimientos | length > 5 %}
+  <div class="card-footer text-muted small text-center py-1">
+    Mostrando 5 de {{ mantenimientos | length }} registros.
+    <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}">Ver todos</a>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="card-body text-muted small text-center py-3">
+    Sin mantenimientos registrados.
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

@@ -43,6 +43,9 @@
         <td>{{ cliente.telefono or '—' }}</td>
         <td>{{ cliente.direccion or '—' }}</td>
         <td class="text-end">
+          <a href="{{ url_for('maintenance.historial_cliente', cliente_id=cliente.id) }}" class="btn btn-outline-primary btn-sm" title="Historial">
+            <i class="bi bi-clock-history"></i>
+          </a>
           <a href="{{ url_for('admin.editar_cliente', id=cliente.id) }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-pencil"></i>
           </a>
