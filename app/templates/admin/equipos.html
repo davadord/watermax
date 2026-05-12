@@ -62,7 +62,7 @@
             <i class="bi bi-pencil"></i>
           </a>
           <form method="POST" action="{{ url_for('admin.eliminar_equipo', id=equipo.id) }}" class="d-inline"
-                onsubmit="return confirm('¿Eliminar este equipo?')">
+                onsubmit="return confirm(this.dataset.msg)" data-msg="{{ 'Este equipo tiene historial de mantenimientos. Seguro que desea desactivarlo?' if equipo.mantenimientos else 'Eliminar este equipo? Esta accion no se puede deshacer.' }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-outline-danger btn-sm">
               <i class="bi bi-trash"></i>
@@ -78,4 +78,44 @@
     </tbody>
   </table>
 </div>
+
+{% if equipos_inactivos %}
+<h5 class="mt-4 text-muted"><i class="bi bi-archive"></i> Equipos inactivos</h5>
+<div class="table-responsive">
+  <table class="table table-hover align-middle text-muted">
+    <thead class="table-light">
+      <tr>
+        <th>N.° serie</th>
+        <th>Tipo de equipo</th>
+        <th>Cliente</th>
+        <th>Zona</th>
+        <th>Sector</th>
+        <th>Instalación</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for equipo in equipos_inactivos %}
+      <tr class="text-muted">
+        <td>{{ equipo.numero_serie or '—' }}</td>
+        <td>{{ equipo.tipo_equipo.nombre }}</td>
+        <td>{{ equipo.cliente.nombre }}</td>
+        <td>{{ equipo.zona.nombre }}</td>
+        <td>{{ equipo.sector or '—' }}</td>
+        <td>{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
+        <td class="text-end">
+          <form method="POST" action="{{ url_for('admin.reactivar_equipo', id=equipo.id) }}" class="d-inline"
+                onsubmit="return confirm('¿Reactivar este equipo? El historial anterior no se usará en las proyecciones.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-success btn-sm" title="Reactivar">
+              <i class="bi bi-arrow-counterclockwise"></i> Reactivar
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}

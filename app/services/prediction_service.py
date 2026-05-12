@@ -44,9 +44,14 @@ def calcular_vencimientos(equipo):
 
         fechas = [d.mantenimiento.fecha for d in historial]
 
-        # Calcular intervalo real si hay al menos 2 intervenciones
+        # Si el equipo fue reactivado, descartar historial anterior a la reactivación
+        fecha_base = equipo.fecha_instalacion
+        if equipo.fecha_reactivacion:
+            fecha_base = max(equipo.fecha_instalacion, equipo.fecha_reactivacion)
+            fechas = [f for f in fechas if f >= equipo.fecha_reactivacion]
+
         fuente = "nominal"
-        intervalo_dias = intervalo_nominal * 30  # aproximación
+        intervalo_dias = intervalo_nominal * 30
 
         if len(fechas) >= 2:
             ciclos_dias = [
@@ -54,12 +59,11 @@ def calcular_vencimientos(equipo):
                 for i in range(len(fechas) - 1)
             ]
             intervalo_real = int(mean(ciclos_dias))
-            # Usar historial si no difiere más del 50% del nominal
             if abs(intervalo_real - intervalo_dias) / intervalo_dias <= 0.5:
                 intervalo_dias = intervalo_real
                 fuente = "historico"
 
-        ultima_fecha = fechas[-1] if fechas else equipo.fecha_instalacion
+        ultima_fecha = fechas[-1] if fechas else fecha_base
         fecha_proyectada = ultima_fecha + timedelta(days=intervalo_dias)
         dias_restantes = (fecha_proyectada - hoy).days
 
@@ -109,6 +113,9 @@ def calcular_proximo_componente(equipo, componente, fecha_intervencion):
     )
 
     fechas = [d.mantenimiento.fecha for d in historial]
+
+    if equipo.fecha_reactivacion:
+        fechas = [f for f in fechas if f >= equipo.fecha_reactivacion]
 
     intervalo_dias = intervalo_nominal_dias
     if len(fechas) >= 2:

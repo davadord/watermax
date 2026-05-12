@@ -40,6 +40,7 @@ class EquipoInstalado(db.Model):
     sector = db.Column(db.String(100))
     numero_serie = db.Column(db.String(80))
     fecha_instalacion = db.Column(db.Date, nullable=False)
+    fecha_reactivacion = db.Column(db.Date, nullable=True)
     activo = db.Column(db.Boolean, default=True)
     zona = db.relationship("Zona", backref="equipos")
     mantenimientos = db.relationship("Mantenimiento", backref="equipo", lazy=True)

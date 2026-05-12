@@ -366,6 +366,13 @@ def equipos():
         query = query.filter_by(cliente_id=cliente_id)
     equipos = query.all()
 
+    query_inactivos = EquipoInstalado.query.filter_by(activo=False)
+    if zona_id:
+        query_inactivos = query_inactivos.filter_by(zona_id=zona_id)
+    if cliente_id:
+        query_inactivos = query_inactivos.filter_by(cliente_id=cliente_id)
+    equipos_inactivos = query_inactivos.all()
+
     if zona_id:
         cliente_ids = db.session.query(EquipoInstalado.cliente_id).filter_by(
             zona_id=zona_id, activo=True
@@ -386,6 +393,7 @@ def equipos():
 
     return render_template("admin/equipos.html",
                            equipos=equipos,
+                           equipos_inactivos=equipos_inactivos,
                            zonas=zonas,
                            clientes=clientes,
                            zona_id=zona_id,
@@ -482,9 +490,26 @@ def eliminar_equipo(id):
         flash("Equipo no encontrado.", "danger")
         return redirect(url_for("admin.equipos"))
     if equipo.mantenimientos:
-        flash("No se puede eliminar: el equipo tiene historial de mantenimiento.", "danger")
+        equipo.activo = False
+        db.session.commit()
+        flash("Equipo desactivado. El historial de mantenimientos se conserva.", "success")
+    else:
+        db.session.delete(equipo)
+        db.session.commit()
+        flash("Equipo eliminado.", "success")
+    return redirect(url_for("admin.equipos"))
+
+
+@admin_bp.route("/equipos/<int:id>/reactivar", methods=["POST"])
+@login_required
+@role_required(*_admin_roles)
+def reactivar_equipo(id):
+    equipo = db.session.get(EquipoInstalado, id)
+    if not equipo or equipo.activo:
+        flash("Equipo no encontrado o ya está activo.", "danger")
         return redirect(url_for("admin.equipos"))
-    equipo.activo = False
+    equipo.activo = True
+    equipo.fecha_reactivacion = date.today()
     db.session.commit()
-    flash("Equipo eliminado.", "success")
+    flash(f"Equipo {equipo.numero_serie or equipo.tipo_equipo.nombre} reactivado. El motor predictivo usará esta fecha como punto de partida.", "success")
     return redirect(url_for("admin.equipos"))
