@@ -47,3 +47,16 @@ app/static/reports/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Claude Code (configuración local)
+.claude/
+
+# Documentación de titulación y archivos personales
+ANTEPROYECTO APROBADO.docx
+ANTEPROYECTO APROBADO.pdf
+PT-INDIVIDUAL-MODELO.docx
+PT-INDIVIDUAL-MODELO.pdf
+TESIS REAL - EJEMPLO.pdf
+anteproyecto_text.txt
+requirements_backup.txt
+watermax.zip
