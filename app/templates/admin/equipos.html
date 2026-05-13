@@ -1,121 +1,186 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state, delete_button, confirm_button, icon_link %}
 {% block title %}Equipos instalados — Watermax{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-tools text-primary"></i> Equipos instalados</h4>
+
+{% call page_header(
+    "Equipos instalados",
+    subtitle="Inventario de purificadores en operación, por cliente y zona.",
+    icon="tools") %}
   <a href="{{ url_for('admin.nuevo_equipo') }}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg"></i> Nuevo equipo
   </a>
-</div>
+{% endcall %}
 
-<form class="row g-2 mb-3" method="GET">
-  <div class="col-auto">
-    <select name="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">Todas las zonas</option>
-      {% for zona in zonas %}
-        <option value="{{ zona.id }}" {% if zona_id == zona.id %}selected{% endif %}>{{ zona.nombre }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-auto">
-    <select name="cliente_id" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">Todos los clientes</option>
-      {% for cliente in clientes %}
-        <option value="{{ cliente.id }}" {% if cliente_id == cliente.id %}selected{% endif %}>{{ cliente.nombre }}</option>
-      {% endfor %}
-    </select>
-  </div>
+<form method="GET" class="wm-toolbar">
+  <label class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+    <i class="bi bi-funnel"></i> Filtrar
+  </label>
+  <select name="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">Todas las zonas</option>
+    {% for zona in zonas %}
+      <option value="{{ zona.id }}" {% if zona_id == zona.id %}selected{% endif %}>{{ zona.nombre }}</option>
+    {% endfor %}
+  </select>
+  <select name="cliente_id" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">Todos los clientes</option>
+    {% for cliente in clientes %}
+      <option value="{{ cliente.id }}" {% if cliente_id == cliente.id %}selected{% endif %}>{{ cliente.nombre }}</option>
+    {% endfor %}
+  </select>
   {% if zona_id or cliente_id %}
-  <div class="col-auto">
-    <a href="{{ url_for('admin.equipos') }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
-  </div>
+    <button type="button" class="btn btn-link btn-sm text-decoration-none"
+            data-filter-reset>Limpiar</button>
   {% endif %}
+  <div class="wm-toolbar-spacer"></div>
+  <span class="text-muted small">
+    <span class="wm-status wm-status-ok"><i class="bi bi-check"></i> {{ equipos|length }} activo{% if equipos|length != 1 %}s{% endif %}</span>
+    {% if equipos_inactivos %}
+      <span class="wm-status wm-status-off ms-1"><i class="bi bi-archive"></i> {{ equipos_inactivos|length }} inactivo{% if equipos_inactivos|length != 1 %}s{% endif %}</span>
+    {% endif %}
+  </span>
 </form>
 
-<div class="table-responsive">
-  <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>N.° serie</th>
-        <th>Tipo de equipo</th>
-        <th>Cliente</th>
-        <th>Zona</th>
-        <th>Sector</th>
-        <th>Instalación</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for equipo in equipos %}
-      <tr>
-        <td>{{ equipo.numero_serie or '—' }}</td>
-        <td>{{ equipo.tipo_equipo.nombre }}</td>
-        <td>{{ equipo.cliente.nombre }}</td>
-        <td>{{ equipo.zona.nombre }}</td>
-        <td>{{ equipo.sector or '—' }}</td>
-        <td>{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
-        <td class="text-end">
-          <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}" class="btn btn-outline-primary btn-sm" title="Ver historial">
-            <i class="bi bi-clock-history"></i>
-          </a>
-          <a href="{{ url_for('admin.editar_equipo', id=equipo.id) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-pencil"></i>
-          </a>
-          <form method="POST" action="{{ url_for('admin.eliminar_equipo', id=equipo.id) }}" class="d-inline"
-                onsubmit="return confirm(this.dataset.msg)" data-msg="{{ 'Este equipo tiene historial de mantenimientos. Seguro que desea desactivarlo?' if equipo.mantenimientos else 'Eliminar este equipo? Esta accion no se puede deshacer.' }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-              <i class="bi bi-trash"></i>
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="7" class="text-center text-muted py-4">No hay equipos registrados.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% if not equipos and not equipos_inactivos %}
+  <div class="wm-table-card">
+    {% if zona_id or cliente_id %}
+      {{ empty_state(
+         title="Sin equipos para este filtro",
+         message="Cambia o limpia los filtros para ver todos los equipos.",
+         icon="tools",
+         action_label="Limpiar filtros",
+         action_url=url_for('admin.equipos'),
+         action_icon="x-circle",
+         action_variant="outline-secondary") }}
+    {% else %}
+      {{ empty_state(
+         title="Aún no hay equipos instalados",
+         message="Registra la primera instalación para empezar a usar el motor predictivo.",
+         icon="tools",
+         action_label="Nuevo equipo",
+         action_url=url_for('admin.nuevo_equipo')) }}
+    {% endif %}
+  </div>
+{% else %}
+
+{% if equipos %}
+<div class="wm-table-card mb-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Equipo</th>
+          <th>Cliente</th>
+          <th>Zona / Sector</th>
+          <th>Instalación</th>
+          <th class="actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for equipo in equipos %}
+        <tr>
+          <td>
+            <strong>{{ equipo.tipo_equipo.nombre }}</strong>
+            {% if equipo.tipo_equipo.marca %}
+              <span class="text-muted small">· {{ equipo.tipo_equipo.marca }}</span>
+            {% endif %}
+            <div class="text-muted small">
+              {% if equipo.numero_serie %}
+                <span class="wm-mono">S/N {{ equipo.numero_serie }}</span>
+              {% else %}
+                <span class="text-muted">Sin N.° serie</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ equipo.cliente.nombre }}</td>
+          <td>
+            <span>{{ equipo.zona.nombre }}</span>
+            {% if equipo.sector %}
+              <div class="text-muted small">{{ equipo.sector }}</div>
+            {% endif %}
+          </td>
+          <td class="text-nowrap">{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
+          <td class="actions">
+            {{ icon_link(url_for('maintenance.historial_equipo', equipo_id=equipo.id),
+                        "clock-history", "Ver historial", "outline-primary") }}
+            {{ icon_link(url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id),
+                        "clipboard2-plus", "Registrar mantenimiento", "outline-success") }}
+            {{ icon_link(url_for('admin.editar_equipo', id=equipo.id),
+                        "pencil", "Editar") }}
+            {% if equipo.mantenimientos %}
+              {{ delete_button(
+                  url_for('admin.eliminar_equipo', id=equipo.id),
+                  title="¿Desactivar este equipo?",
+                  detail="Tiene historial de mantenimientos. Se conservará en archivo y podrás reactivarlo después.",
+                  label_action="Sí, desactivar",
+                  icon="archive",
+                  tooltip="Desactivar") }}
+            {% else %}
+              {{ delete_button(
+                  url_for('admin.eliminar_equipo', id=equipo.id),
+                  title="¿Eliminar este equipo?",
+                  detail="No tiene historial de mantenimientos. Esta acción no se puede deshacer.",
+                  label_action="Sí, eliminar") }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% endif %}
 
 {% if equipos_inactivos %}
-<h5 class="mt-4 text-muted"><i class="bi bi-archive"></i> Equipos inactivos</h5>
-<div class="table-responsive">
-  <table class="table table-hover align-middle text-muted">
-    <thead class="table-light">
-      <tr>
-        <th>N.° serie</th>
-        <th>Tipo de equipo</th>
-        <th>Cliente</th>
-        <th>Zona</th>
-        <th>Sector</th>
-        <th>Instalación</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for equipo in equipos_inactivos %}
-      <tr class="text-muted">
-        <td>{{ equipo.numero_serie or '—' }}</td>
-        <td>{{ equipo.tipo_equipo.nombre }}</td>
-        <td>{{ equipo.cliente.nombre }}</td>
-        <td>{{ equipo.zona.nombre }}</td>
-        <td>{{ equipo.sector or '—' }}</td>
-        <td>{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
-        <td class="text-end">
-          <form method="POST" action="{{ url_for('admin.reactivar_equipo', id=equipo.id) }}" class="d-inline"
-                onsubmit="return confirm('¿Reactivar este equipo? El historial anterior no se usará en las proyecciones.')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-success btn-sm" title="Reactivar">
-              <i class="bi bi-arrow-counterclockwise"></i> Reactivar
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  <h2 class="h6 text-muted mt-4 mb-2">
+    <i class="bi bi-archive"></i> Equipos inactivos
+    <span class="text-muted small">— historial conservado, fuera de proyecciones</span>
+  </h2>
+  <div class="wm-table-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle text-muted mb-0">
+        <thead>
+          <tr>
+            <th>Equipo</th>
+            <th>Cliente</th>
+            <th>Zona / Sector</th>
+            <th>Instalación</th>
+            <th class="actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for equipo in equipos_inactivos %}
+          <tr>
+            <td>
+              {{ equipo.tipo_equipo.nombre }}
+              {% if equipo.numero_serie %}
+                <div class="wm-mono small">S/N {{ equipo.numero_serie }}</div>
+              {% endif %}
+            </td>
+            <td>{{ equipo.cliente.nombre }}</td>
+            <td>
+              {{ equipo.zona.nombre }}
+              {% if equipo.sector %}<div class="small">{{ equipo.sector }}</div>{% endif %}
+            </td>
+            <td class="text-nowrap">{{ equipo.fecha_instalacion.strftime('%d/%m/%Y') }}</td>
+            <td class="actions">
+              {{ confirm_button(
+                  url_for('admin.reactivar_equipo', id=equipo.id),
+                  title="¿Reactivar este equipo?",
+                  detail="El historial anterior no se usará en las proyecciones. La fecha de hoy se tomará como punto de partida para el motor predictivo.",
+                  label_action="Sí, reactivar",
+                  variant="success",
+                  btn_class="btn-outline-success",
+                  icon="arrow-counterclockwise",
+                  label="Reactivar") }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
 {% endif %}
 {% endblock %}

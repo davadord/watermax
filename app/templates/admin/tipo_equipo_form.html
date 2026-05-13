@@ -1,63 +1,89 @@
 {% extends "base.html" %}
-{% block title %}{% if tipo %}Editar tipo{% else %}Nuevo tipo{% endif %} — Watermax{% endblock %}
+{% from "_macros.html" import page_header, field_value, field_checked %}
+{% block title %}{% if tipo %}Editar tipo de equipo{% else %}Nuevo tipo de equipo{% endif %} — Watermax{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-7">
-    <h4 class="mb-4">
-      <i class="bi bi-cpu-fill text-primary"></i>
-      {% if tipo %}Editar tipo de equipo{% else %}Nuevo tipo de equipo{% endif %}
-    </h4>
 
-    <form method="POST">
+{% call page_header(
+    (tipo and "Editar tipo de equipo") or "Nuevo tipo de equipo",
+    subtitle=(tipo and tipo.nombre) or "Define un modelo de purificador y los componentes que incluye.",
+    icon="cpu-fill",
+    breadcrumb=[("Tipos de equipo", url_for('admin.tipos_equipo')),
+                ((tipo and "Editar") or "Nuevo", None)]) %}
+{% endcall %}
+
+<div class="row">
+  <div class="col-lg-9">
+    <form method="POST" class="wm-form-card" novalidate data-autofocus>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <div class="mb-3">
-        <label class="form-label">Nombre <span class="text-danger">*</span></label>
-        <input type="text" name="nombre" class="form-control"
-               value="{{ tipo.nombre if tipo else '' }}" required maxlength="100">
+      <h2 class="h6 text-uppercase text-muted mb-3">Modelo</h2>
+      <div class="wm-form-grid">
+        <div class="col-span-2">
+          <label class="form-label required" for="nombre">Nombre</label>
+          <input type="text" id="nombre" name="nombre" class="form-control"
+                 value="{{ field_value('nombre', tipo.nombre if tipo else '') }}"
+                 required aria-required="true" maxlength="100" autocomplete="off"
+                 placeholder="Ej. Purificador doméstico 5 etapas">
+        </div>
+
+        <div>
+          <label class="form-label" for="marca">Marca <span class="text-muted small">(opcional)</span></label>
+          <input type="text" id="marca" name="marca" class="form-control"
+                 value="{{ field_value('marca', tipo.marca if tipo else '') }}"
+                 maxlength="80" placeholder="Ej. Watermax, Aquapure">
+        </div>
+
+        <div>
+          <label class="form-label" for="descripcion">Descripción <span class="text-muted small">(opcional)</span></label>
+          <input type="text" id="descripcion" name="descripcion" class="form-control"
+                 value="{{ field_value('descripcion', tipo.descripcion if tipo else '') }}"
+                 maxlength="250" placeholder="Detalles relevantes del modelo">
+        </div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label">Marca</label>
-        <input type="text" name="marca" class="form-control"
-               value="{{ tipo.marca if tipo else '' }}" maxlength="80">
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Descripción</label>
-        <input type="text" name="descripcion" class="form-control"
-               value="{{ tipo.descripcion if tipo else '' }}" maxlength="250">
-      </div>
+      <hr>
+      <h2 class="h6 text-uppercase text-muted mb-1">Componentes incluidos</h2>
+      <p class="text-muted small mb-3">
+        Marca los componentes que este modelo de equipo lleva. Determinan qué se podrá atender en cada mantenimiento.
+      </p>
 
       {% if componentes %}
-      <hr>
-      <h6 class="mb-3">Componentes</h6>
-      {% set ids_asociados = tipo.componentes | map(attribute='componente_id') | list if tipo else [] %}
-      <div class="row g-2">
-        {% for comp in componentes %}
-        <div class="col-md-6">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="componente_ids"
-                   value="{{ comp.id }}" id="comp_{{ comp.id }}"
-                   {% if comp.id in ids_asociados %}checked{% endif %}>
-            <label class="form-check-label" for="comp_{{ comp.id }}">
-              {{ comp.nombre }}
-              <span class="text-muted small">({{ comp.intervalo_nominal }} meses)</span>
-            </label>
+        {% set ids_asociados = tipo.componentes | map(attribute='componente_id') | list if tipo else [] %}
+        <div class="wm-form-grid">
+          {% for comp in componentes %}
+            <div>
+              <div class="form-check form-check-inline-card border rounded p-2 h-100"
+                   style="display: flex; align-items: center; gap: .5rem;">
+                <input class="form-check-input m-0" type="checkbox" name="componente_ids"
+                       value="{{ comp.id }}" id="comp_{{ comp.id }}"
+                       {{ field_checked('componente_ids', comp.id, comp.id in ids_asociados) }}>
+                <label class="form-check-label flex-grow-1" for="comp_{{ comp.id }}">
+                  <div class="fw-semibold">{{ comp.nombre }}</div>
+                  <div class="text-muted small">
+                    {{ comp.intervalo_nominal }} mes{% if comp.intervalo_nominal != 1 %}es{% endif %}
+                  </div>
+                </label>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-warning d-flex gap-2 align-items-start">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <div>
+            No hay componentes registrados todavía.
+            <a href="{{ url_for('admin.nuevo_componente') }}" class="alert-link">Crea uno antes</a>
+            para poder asociarlo a este modelo.
           </div>
         </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <hr>
-      <p class="text-muted small">No hay componentes registrados. <a href="{{ url_for('admin.nuevo_componente') }}">Crear uno</a>.</p>
       {% endif %}
 
-      <div class="d-flex gap-2 mt-4">
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-check-lg"></i> Guardar
+      <div class="wm-form-actions">
+        <button type="submit" class="btn btn-primary"
+                data-loading-text="{{ 'Guardando…' if tipo else 'Creando…' }}">
+          <i class="bi bi-check-lg" aria-hidden="true"></i> {{ "Guardar cambios" if tipo else "Crear tipo" }}
         </button>
-        <a href="{{ url_for('admin.tipos_equipo') }}" class="btn btn-outline-secondary">Cancelar</a>
+        <a href="{{ url_for('admin.tipos_equipo') }}" class="btn btn-light">Cancelar</a>
       </div>
     </form>
   </div>

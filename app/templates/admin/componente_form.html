@@ -1,39 +1,53 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, field_value %}
 {% block title %}{% if componente %}Editar componente{% else %}Nuevo componente{% endif %} — Watermax{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <h4 class="mb-4">
-      <i class="bi bi-tools text-primary"></i>
-      {% if componente %}Editar componente{% else %}Nuevo componente{% endif %}
-    </h4>
 
-    <form method="POST">
+{% call page_header(
+    (componente and "Editar componente") or "Nuevo componente",
+    subtitle=(componente and componente.nombre) or "Define una pieza o consumible y su intervalo nominal.",
+    icon="puzzle",
+    breadcrumb=[("Componentes", url_for('admin.componentes')),
+                ((componente and "Editar") or "Nuevo", None)]) %}
+{% endcall %}
+
+<div class="row">
+  <div class="col-lg-7">
+    <form method="POST" class="wm-form-card" novalidate data-autofocus>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="mb-3">
-        <label class="form-label">Nombre <span class="text-danger">*</span></label>
-        <input type="text" name="nombre" class="form-control"
-               value="{{ componente.nombre if componente else '' }}" required maxlength="100">
+        <label class="form-label required" for="nombre">Nombre</label>
+        <input type="text" id="nombre" name="nombre" class="form-control"
+               value="{{ field_value('nombre', componente.nombre if componente else '') }}"
+               required aria-required="true" maxlength="100" autocomplete="off"
+               placeholder="Ej. Filtro sedimentos, Membrana RO">
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Descripción</label>
-        <input type="text" name="descripcion" class="form-control"
-               value="{{ componente.descripcion if componente else '' }}" maxlength="200">
+        <label class="form-label" for="descripcion">Descripción <span class="text-muted small">(opcional)</span></label>
+        <input type="text" id="descripcion" name="descripcion" class="form-control"
+               value="{{ field_value('descripcion', componente.descripcion if componente else '') }}"
+               maxlength="200" placeholder="Función, material u observación útil">
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Intervalo nominal (meses) <span class="text-danger">*</span></label>
-        <input type="number" name="intervalo_nominal" class="form-control"
-               value="{{ componente.intervalo_nominal if componente else '' }}" required min="1" max="120">
+        <label class="form-label required" for="intervalo_nominal">Intervalo nominal</label>
+        <div class="input-group" style="max-width: 220px;">
+          <input type="number" id="intervalo_nominal" name="intervalo_nominal" class="form-control"
+                 value="{{ field_value('intervalo_nominal', componente.intervalo_nominal if componente else '') }}"
+                 required aria-required="true" min="1" max="120" inputmode="numeric">
+          <span class="input-group-text">meses</span>
+        </div>
+        <div class="form-text">Tiempo estimado de vida útil. Lo usa el motor predictivo como base.</div>
       </div>
 
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-check-lg"></i> Guardar
+      <div class="wm-form-actions">
+        <button type="submit" class="btn btn-primary"
+                data-loading-text="{{ 'Guardando…' if componente else 'Creando…' }}">
+          <i class="bi bi-check-lg" aria-hidden="true"></i> {{ "Guardar cambios" if componente else "Crear componente" }}
         </button>
-        <a href="{{ url_for('admin.componentes') }}" class="btn btn-outline-secondary">Cancelar</a>
+        <a href="{{ url_for('admin.componentes') }}" class="btn btn-light">Cancelar</a>
       </div>
     </form>
   </div>

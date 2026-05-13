@@ -1,102 +1,141 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, field_value, field_selected %}
 {% block title %}{% if cliente %}Editar cliente{% else %}Nuevo cliente{% endif %} — Watermax{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <h4 class="mb-4">
-      <i class="bi bi-person-fill text-primary"></i>
-      {% if cliente %}Editar cliente{% else %}Nuevo cliente{% endif %}
-    </h4>
 
-    <form method="POST" id="form-cliente">
+{% call page_header(
+    (cliente and "Editar cliente") or "Nuevo cliente",
+    subtitle=(cliente and cliente.nombre) or "Registra los datos del nuevo cliente.",
+    icon="person-fill",
+    breadcrumb=[("Clientes", url_for('admin.clientes')),
+                ((cliente and "Editar") or "Nuevo", None)]) %}
+{% endcall %}
+
+<div class="row">
+  <div class="col-lg-8">
+    <form method="POST" id="form-cliente" class="wm-form-card" novalidate data-autofocus>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+      <h2 class="h6 text-uppercase text-muted mb-3">Datos generales</h2>
       <div class="mb-3">
-        <label class="form-label">Nombre <span class="text-danger">*</span></label>
-        <input type="text" name="nombre" class="form-control"
-               value="{{ cliente.nombre if cliente else '' }}" required maxlength="150">
+        <label class="form-label required" for="nombre">Nombre completo o razón social</label>
+        <input type="text" id="nombre" name="nombre" class="form-control"
+               value="{{ field_value('nombre', cliente.nombre if cliente else '') }}"
+               required aria-required="true" maxlength="150" autocomplete="off"
+               placeholder="Ej. Juan Pérez · Comercial XYZ S.A.">
       </div>
 
-      <div class="row g-2 mb-3">
-        <div class="col-md-4">
-          <label class="form-label">Tipo de ID <span class="text-danger">*</span></label>
-          <select name="tipo_identificador" id="tipo_identificador" class="form-select" required>
-            <option value="">Seleccionar...</option>
+      <div class="wm-form-grid">
+        <div>
+          <label class="form-label required" for="tipo_identificador">Tipo de identificación</label>
+          <select name="tipo_identificador" id="tipo_identificador" class="form-select"
+                  required aria-required="true">
+            <option value="">Seleccionar…</option>
             {% for tipo in tipos %}
-            <option value="{{ tipo }}"
-              {% if cliente and cliente.tipo_identificador == tipo %}selected
-              {% endif %}>{{ tipo }}</option>
+            <option value="{{ tipo }}" {{ field_selected('tipo_identificador', tipo, cliente.tipo_identificador if cliente else None) }}>{{ tipo }}</option>
             {% endfor %}
           </select>
         </div>
-        <div class="col-md-8">
-          <label class="form-label">Número de identificación <span class="text-danger">*</span></label>
-          <input type="text" name="identificador" id="identificador" class="form-control"
-                 value="{{ cliente.identificador if cliente else '' }}" required maxlength="30">
-          <div class="form-text" id="id-hint"></div>
+        <div>
+          <label class="form-label required" for="identificador">Número de identificación</label>
+          <input type="text" name="identificador" id="identificador" class="form-control wm-mono"
+                 value="{{ field_value('identificador', cliente.identificador if cliente else '') }}"
+                 required aria-required="true" maxlength="30" autocomplete="off">
+          <div class="form-text" id="id-hint">Selecciona primero un tipo para ver el formato.</div>
         </div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label">Teléfono</label>
-        <input type="text" name="telefono" id="telefono" class="form-control"
-               value="{{ cliente.telefono if cliente else '' }}"
-               maxlength="20" pattern="[\+\d\-\s]+"
-               title="Solo dígitos, espacios, guiones y + (código de país)">
+      <hr>
+      <h2 class="h6 text-uppercase text-muted mb-3">Contacto</h2>
+      <div class="wm-form-grid">
+        <div>
+          <label class="form-label" for="telefono">Teléfono</label>
+          <input type="text" name="telefono" id="telefono" class="form-control"
+                 value="{{ field_value('telefono', cliente.telefono if cliente else '') }}"
+                 maxlength="20" pattern="[\+\d\-\s]+" inputmode="tel" autocomplete="tel"
+                 placeholder="+593 99 999 9999"
+                 title="Solo dígitos, espacios, guiones y + (código de país)">
+          <div class="form-text">Dígitos, espacios, guiones o + de código país.</div>
+        </div>
+        <div>
+          <label class="form-label" for="email">Correo electrónico</label>
+          <input type="email" name="email" id="email" class="form-control"
+                 value="{{ field_value('email', cliente.email if cliente else '') }}"
+                 maxlength="120" autocomplete="email"
+                 placeholder="cliente@dominio.com"
+                 pattern="[^@]+@[^@]+\.[a-zA-Z]{2,}"
+                 title="Formato: usuario@dominio.com">
+        </div>
+        <div class="col-span-2">
+          <label class="form-label" for="direccion">Dirección</label>
+          <input type="text" name="direccion" id="direccion" class="form-control"
+                 value="{{ field_value('direccion', cliente.direccion if cliente else '') }}"
+                 maxlength="250" autocomplete="street-address"
+                 placeholder="Calle, número, ciudad / referencia">
+        </div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label">Dirección</label>
-        <input type="text" name="direccion" class="form-control"
-               value="{{ cliente.direccion if cliente else '' }}" maxlength="250">
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input type="email" name="email" class="form-control"
-               value="{{ cliente.email if cliente else '' }}" maxlength="120"
-               pattern="[^@]+@[^@]+\.[a-zA-Z]{2,}"
-               title="Debe tener formato válido: usuario@dominio.com">
-      </div>
-
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-check-lg"></i> Guardar
+      <div class="wm-form-actions">
+        <button type="submit" class="btn btn-primary"
+                data-loading-text="{{ 'Guardando…' if cliente else 'Creando…' }}">
+          <i class="bi bi-check-lg" aria-hidden="true"></i> {{ "Guardar cambios" if cliente else "Crear cliente" }}
         </button>
-        <a href="{{ url_for('admin.clientes') }}" class="btn btn-outline-secondary">Cancelar</a>
+        <a href="{{ url_for('admin.clientes') }}" class="btn btn-light">Cancelar</a>
       </div>
     </form>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card bg-light border-0">
+      <div class="card-body small text-muted">
+        <h3 class="h6 text-dark"><i class="bi bi-info-circle"></i> Sobre la identificación</h3>
+        <ul class="ps-3 mb-0">
+          <li><strong>Cédula:</strong> 10 dígitos.</li>
+          <li><strong>RUC:</strong> 13 dígitos.</li>
+          <li><strong>Pasaporte:</strong> alfanumérico libre.</li>
+          <li><strong>Otro:</strong> se sugiere un código automático con el teléfono.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const tipoSelect    = document.getElementById('tipo_identificador');
-const idInput       = document.getElementById('identificador');
-const telefonoInput = document.getElementById('telefono');
-const hint          = document.getElementById('id-hint');
+(function () {
+  const tipoSelect    = document.getElementById('tipo_identificador');
+  const idInput       = document.getElementById('identificador');
+  const telefonoInput = document.getElementById('telefono');
+  const hint          = document.getElementById('id-hint');
 
-const hints = {
-  'Cédula':    '10 dígitos numéricos',
-  'RUC':       '13 dígitos numéricos',
-  'Pasaporte': 'Alfanumérico libre',
-  'Otro':      'Se generará un código automático si el campo está vacío',
-};
+  const hints = {
+    'Cédula':    '10 dígitos numéricos.',
+    'RUC':       '13 dígitos numéricos.',
+    'Pasaporte': 'Alfanumérico libre.',
+    'Otro':      'Si lo dejas vacío se generará un código automático con el teléfono.',
+  };
 
-tipoSelect.addEventListener('change', function () {
-  hint.textContent = hints[this.value] || '';
-  if (this.value === 'Otro' && !idInput.value) sugerirCodigo();
-});
+  function updateHint() {
+    hint.textContent = hints[tipoSelect.value] || 'Selecciona primero un tipo para ver el formato.';
+  }
 
-telefonoInput.addEventListener('blur', function () {
-  if (tipoSelect.value === 'Otro' && !idInput.value) sugerirCodigo();
-});
+  tipoSelect.addEventListener('change', function () {
+    updateHint();
+    if (this.value === 'Otro' && !idInput.value) sugerirCodigo();
+  });
 
-function sugerirCodigo() {
-  fetch(`{{ url_for('admin.sugerir_codigo_otro') }}?telefono=${encodeURIComponent(telefonoInput.value)}`)
-    .then(r => r.json())
-    .then(data => { if (!idInput.value) idInput.value = data.codigo; });
-}
+  telefonoInput.addEventListener('blur', function () {
+    if (tipoSelect.value === 'Otro' && !idInput.value) sugerirCodigo();
+  });
+
+  function sugerirCodigo() {
+    fetch(`{{ url_for('admin.sugerir_codigo_otro') }}?telefono=${encodeURIComponent(telefonoInput.value)}`)
+      .then(r => r.json())
+      .then(data => { if (!idInput.value) idInput.value = data.codigo; });
+  }
+
+  updateHint();
+})();
 </script>
 {% endblock %}

@@ -1,25 +1,32 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state %}
 {% block title %}Historial — {{ cliente.nombre }} — Watermax{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-1">
-  <div>
-    <h4><i class="bi bi-clock-history text-primary"></i> Historial por cliente</h4>
-    <p class="text-muted mb-0">
-      {{ cliente.nombre }} · <span class="small">{{ cliente.tipo_identificador }} {{ cliente.identificador }}</span>
-    </p>
-  </div>
-  <a href="{{ url_for('admin.clientes') }}" class="btn btn-outline-secondary btn-sm">
-    <i class="bi bi-arrow-left"></i> Clientes
-  </a>
-</div>
 
-<hr class="mt-2 mb-3">
+{% set _back_url   = url_for('admin.clientes') if is_admin else url_for('reports.dashboard') %}
+{% set _back_label = "Volver a clientes" if is_admin else "Volver al dashboard" %}
+{% set _bc = [("Clientes", url_for('admin.clientes')) if is_admin else ("Dashboard", url_for('reports.dashboard')),
+              (cliente.nombre, None)] %}
+
+{% call page_header(
+    "Historial del cliente",
+    subtitle=cliente.nombre ~ ' · ' ~ cliente.tipo_identificador ~ ' ' ~ cliente.identificador,
+    icon="clock-history",
+    breadcrumb=_bc) %}
+  <a href="{{ _back_url }}" class="btn btn-light btn-sm">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ _back_label }}
+  </a>
+{% endcall %}
 
 {% if not equipos %}
-<div class="text-center text-muted py-5">
-  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-  Este cliente no tiene equipos instalados.
-</div>
+  <div class="wm-table-card">
+    {{ empty_state(
+       title="Este cliente no tiene equipos instalados",
+       message="Registra un equipo primero para poder agendar mantenimientos.",
+       icon="tools",
+       action_label="Registrar equipo",
+       action_url=url_for('admin.nuevo_equipo')) }}
+  </div>
 {% else %}
 {% for equipo in equipos %}
 {% set mantenimientos = equipo.mantenimientos | sort(attribute='fecha', reverse=True) %}
@@ -36,26 +43,40 @@
 {% set por_vencer = proximo and not vencido and (proximo - hoy).days <= 15 %}
 
 <div class="card mb-3 {% if vencido %}border-danger{% elif por_vencer %}border-warning{% endif %}">
-  <div class="card-header d-flex justify-content-between align-items-center
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2
     {% if vencido %}bg-danger bg-opacity-10{% elif por_vencer %}bg-warning bg-opacity-10{% endif %}">
     <div>
       <strong>{{ equipo.tipo_equipo.nombre }}</strong>
-      <span class="text-muted ms-2 small">{{ equipo.zona.nombre }}{% if equipo.sector %} · {{ equipo.sector }}{% endif %}{% if equipo.numero_serie %} · N.° {{ equipo.numero_serie }}{% endif %}</span>
+      <div class="text-muted small">
+        <i class="bi bi-geo-alt"></i> {{ equipo.zona.nombre }}{% if equipo.sector %} · {{ equipo.sector }}{% endif %}
+        {% if equipo.numero_serie %} · <span class="wm-mono">S/N {{ equipo.numero_serie }}</span>{% endif %}
+        {% if not equipo.activo %} · <span class="wm-status wm-status-off">Inactivo</span>{% endif %}
+      </div>
     </div>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
       {% if vencido %}
-      <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Vencido {{ proximo.strftime('%d/%m/%Y') }}</span>
+        <span class="wm-status wm-status-bad">
+          <i class="bi bi-exclamation-triangle-fill"></i> Vencido {{ proximo.strftime('%d/%m/%Y') }}
+        </span>
       {% elif por_vencer %}
-      <span class="badge bg-warning text-dark"><i class="bi bi-clock-fill me-1"></i>Vence {{ proximo.strftime('%d/%m/%Y') }}</span>
+        <span class="wm-status wm-status-warn">
+          <i class="bi bi-clock-fill"></i> Vence {{ proximo.strftime('%d/%m/%Y') }}
+        </span>
       {% elif proximo %}
-      <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Próximo {{ proximo.strftime('%d/%m/%Y') }}</span>
+        <span class="wm-status wm-status-ok">
+          <i class="bi bi-check-circle-fill"></i> Próximo {{ proximo.strftime('%d/%m/%Y') }}
+        </span>
       {% endif %}
-      <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-list-ul"></i> Ver historial
+      <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list-ul"></i> Historial completo
       </a>
-      <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}" class="btn btn-primary btn-sm">
+      {% if equipo.activo %}
+      <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}"
+         class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg"></i> Registrar
       </a>
+      {% endif %}
     </div>
   </div>
 
@@ -95,14 +116,21 @@
     </table>
   </div>
   {% if mantenimientos | length > 5 %}
-  <div class="card-footer text-muted small text-center py-1">
-    Mostrando 5 de {{ mantenimientos | length }} registros.
+  <div class="card-footer text-muted small text-center py-1 bg-white">
+    Mostrando 5 de {{ mantenimientos | length }} registros ·
     <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}">Ver todos</a>
   </div>
   {% endif %}
   {% else %}
-  <div class="card-body text-muted small text-center py-3">
-    Sin mantenimientos registrados.
+  <div class="card-body text-muted text-center py-4">
+    <i class="bi bi-inbox d-block fs-3 mb-1"></i>
+    <p class="mb-2">Sin mantenimientos registrados todavía.</p>
+    {% if equipo.activo %}
+    <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}"
+       class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Registrar primer mantenimiento
+    </a>
+    {% endif %}
   </div>
   {% endif %}
 </div>

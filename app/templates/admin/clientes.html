@@ -1,69 +1,97 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state, delete_button, icon_link %}
 {% block title %}Clientes — Watermax{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-people-fill text-primary"></i> Clientes</h4>
+
+{% call page_header(
+    "Clientes",
+    subtitle="Personas y empresas con equipos instalados o por instalar.",
+    icon="people-fill") %}
   <a href="{{ url_for('admin.nuevo_cliente') }}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg"></i> Nuevo cliente
   </a>
-</div>
+{% endcall %}
 
-<form method="GET" class="row g-2 align-items-end mb-3">
-  <div class="col-auto">
-    <select name="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">Todas las zonas</option>
-      {% for zona in zonas %}
+<form method="GET" class="wm-toolbar">
+  <label for="zona_id" class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+    <i class="bi bi-funnel"></i> Filtrar
+  </label>
+  <select name="zona_id" id="zona_id" class="form-select form-select-sm"
+          onchange="this.form.submit()">
+    <option value="">Todas las zonas</option>
+    {% for zona in zonas %}
       <option value="{{ zona.id }}" {% if zona.id == zona_id %}selected{% endif %}>{{ zona.nombre }}</option>
-      {% endfor %}
-    </select>
-  </div>
+    {% endfor %}
+  </select>
   {% if zona_id %}
-  <div class="col-auto">
-    <a href="{{ url_for('admin.clientes') }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
-  </div>
+    <button type="button" class="btn btn-link btn-sm text-decoration-none"
+            data-filter-reset>Limpiar</button>
   {% endif %}
+  <div class="wm-toolbar-spacer"></div>
+  <span class="text-muted small">{{ clientes|length }} cliente{% if clientes|length != 1 %}s{% endif %}</span>
 </form>
 
-<div class="table-responsive">
-  <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Nombre</th>
-        <th>Identificación</th>
-        <th>Teléfono</th>
-        <th>Dirección</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for cliente in clientes %}
-      <tr>
-        <td>{{ cliente.nombre }}</td>
-        <td><span class="text-muted small">{{ cliente.tipo_identificador }}</span><br>{{ cliente.identificador }}</td>
-        <td>{{ cliente.telefono or '—' }}</td>
-        <td>{{ cliente.direccion or '—' }}</td>
-        <td class="text-end">
-          <a href="{{ url_for('maintenance.historial_cliente', cliente_id=cliente.id) }}" class="btn btn-outline-primary btn-sm" title="Historial">
-            <i class="bi bi-clock-history"></i>
-          </a>
-          <a href="{{ url_for('admin.editar_cliente', id=cliente.id) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-pencil"></i>
-          </a>
-          <form method="POST" action="{{ url_for('admin.eliminar_cliente', id=cliente.id) }}" class="d-inline"
-                onsubmit="return confirm('¿Eliminar a {{ cliente.nombre }}?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-              <i class="bi bi-trash"></i>
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="5" class="text-center text-muted py-4">No hay clientes registrados.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% if not clientes %}
+  <div class="wm-table-card">
+    {% if zona_id %}
+      {{ empty_state(
+         title="Ningún cliente en esta zona",
+         message="Cambia o limpia el filtro para ver todos los clientes.",
+         icon="people",
+         action_label="Limpiar filtros",
+         action_url=url_for('admin.clientes'),
+         action_icon="x-circle",
+         action_variant="outline-secondary") }}
+    {% else %}
+      {{ empty_state(
+         title="Aún no hay clientes",
+         message="Registra el primer cliente para comenzar a instalar equipos.",
+         icon="people",
+         action_label="Nuevo cliente",
+         action_url=url_for('admin.nuevo_cliente')) }}
+    {% endif %}
+  </div>
+{% else %}
+<div class="wm-table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Identificación</th>
+          <th>Teléfono</th>
+          <th>Dirección</th>
+          <th class="actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cliente in clientes %}
+        <tr>
+          <td><strong>{{ cliente.nombre }}</strong></td>
+          <td>
+            <span class="text-muted small d-block">{{ cliente.tipo_identificador }}</span>
+            <span class="wm-mono">{{ cliente.identificador }}</span>
+          </td>
+          <td>{{ cliente.telefono or '—' }}</td>
+          <td class="text-truncate" style="max-width: 260px;" title="{{ cliente.direccion or '' }}">
+            {{ cliente.direccion or '—' }}
+          </td>
+          <td class="actions">
+            {{ icon_link(url_for('maintenance.historial_cliente', cliente_id=cliente.id),
+                        "clock-history", "Ver historial", "outline-primary") }}
+            {{ icon_link(url_for('admin.editar_cliente', id=cliente.id),
+                        "pencil", "Editar") }}
+            {{ delete_button(
+                url_for('admin.eliminar_cliente', id=cliente.id),
+                title="¿Eliminar a " ~ cliente.nombre ~ "?",
+                detail="El cliente se desactivará. Si tiene equipos activos no podrá eliminarse.",
+                label_action="Sí, eliminar") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% endif %}
 {% endblock %}

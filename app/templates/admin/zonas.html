@@ -1,48 +1,65 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state, delete_button, icon_link %}
 {% block title %}Zonas — Watermax{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-geo-alt-fill text-primary"></i> Zonas</h4>
+
+{% call page_header(
+    "Zonas",
+    subtitle="Áreas geográficas o lógicas en las que se agrupan los equipos.",
+    icon="geo-alt-fill",
+    breadcrumb=[("Catálogos", None), ("Zonas", None)]) %}
   <a href="{{ url_for('admin.nueva_zona') }}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg"></i> Nueva zona
   </a>
-</div>
+{% endcall %}
 
-<div class="table-responsive">
-  <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Nombre</th>
-        <th>Descripción</th>
-        <th>Equipos activos</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for zona in zonas %}
-      <tr>
-        <td>{{ zona.nombre }}</td>
-        <td>{{ zona.descripcion or '—' }}</td>
-        <td>{{ zona.equipos | selectattr('activo') | list | length }}</td>
-        <td class="text-end">
-          <a href="{{ url_for('admin.editar_zona', id=zona.id) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-pencil"></i>
-          </a>
-          <form method="POST" action="{{ url_for('admin.eliminar_zona', id=zona.id) }}" class="d-inline"
-                onsubmit="return confirm('¿Eliminar la zona {{ zona.nombre }}?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-              <i class="bi bi-trash"></i>
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="4" class="text-center text-muted py-4">No hay zonas registradas.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% if not zonas %}
+  <div class="wm-table-card">
+    {{ empty_state(
+       title="Aún no hay zonas registradas",
+       message="Las zonas agrupan equipos para facilitar el filtrado en dashboard y reportes.",
+       icon="geo-alt",
+       action_label="Nueva zona",
+       action_url=url_for('admin.nueva_zona')) }}
+  </div>
+{% else %}
+<div class="wm-table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Descripción</th>
+          <th>Equipos activos</th>
+          <th class="actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for zona in zonas %}
+        {% set count_activos = zona.equipos | selectattr('activo') | list | length %}
+        <tr>
+          <td><strong>{{ zona.nombre }}</strong></td>
+          <td>{{ zona.descripcion or '—' }}</td>
+          <td>
+            {% if count_activos %}
+              <span class="badge bg-primary-subtle text-primary">{{ count_activos }}</span>
+            {% else %}
+              <span class="text-muted">0</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            {{ icon_link(url_for('admin.editar_zona', id=zona.id), "pencil", "Editar") }}
+            {{ delete_button(
+                url_for('admin.eliminar_zona', id=zona.id),
+                title="¿Eliminar la zona “" ~ zona.nombre ~ "”?",
+                detail="No podrás eliminarla si tiene equipos activos asociados.",
+                label_action="Sí, eliminar") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% endif %}
 {% endblock %}

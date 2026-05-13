@@ -1,76 +1,101 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state %}
 {% block title %}Historial — {{ equipo.tipo_equipo.nombre }} · {{ equipo.cliente.nombre }} — Watermax{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-1">
-  <div>
-    <h4><i class="bi bi-clock-history text-primary"></i> Historial de mantenimiento</h4>
-    <p class="text-muted mb-0">
-      {{ equipo.tipo_equipo.nombre }} · {{ equipo.cliente.nombre }} · {{ equipo.zona.nombre }}
-      {% if equipo.numero_serie %}<span class="ms-1">· N.° {{ equipo.numero_serie }}</span>{% endif %}
-    </p>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{{ url_for('admin.equipos') }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left"></i> Equipos
-    </a>
-    <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}" class="btn btn-primary btn-sm">
-      <i class="bi bi-plus-lg"></i> Registrar mantenimiento
-    </a>
-  </div>
-</div>
 
-<hr class="mt-2 mb-3">
+{% set _back_url   = url_for('admin.equipos') if is_admin else url_for('reports.dashboard') %}
+{% set _back_label = "Volver a equipos" if is_admin else "Volver al dashboard" %}
+{% set _bc = [("Equipos", url_for('admin.equipos')) if is_admin else ("Dashboard", url_for('reports.dashboard')),
+              (equipo.tipo_equipo.nombre ~ ' — ' ~ equipo.cliente.nombre, None)] %}
+
+{% call page_header(
+    "Historial del equipo",
+    subtitle=equipo.tipo_equipo.nombre ~ ' · ' ~ equipo.cliente.nombre
+             ~ ' · ' ~ equipo.zona.nombre
+             ~ (' · S/N ' ~ equipo.numero_serie if equipo.numero_serie else ''),
+    icon="clock-history",
+    breadcrumb=_bc) %}
+  <a href="{{ _back_url }}" class="btn btn-light btn-sm">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ _back_label }}
+  </a>
+  {% if equipo.activo %}
+  <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}"
+     class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg" aria-hidden="true"></i> Registrar mantenimiento
+  </a>
+  {% endif %}
+{% endcall %}
+
+{% if not equipo.activo %}
+  <div class="alert alert-warning d-flex gap-2 align-items-start">
+    <i class="bi bi-archive-fill"></i>
+    <div>
+      Este equipo está <strong>inactivo</strong>. El historial se conserva pero no se pueden registrar
+      nuevos mantenimientos hasta reactivarlo desde la lista de equipos.
+    </div>
+  </div>
+{% endif %}
 
 {% if paginacion.total == 0 %}
-<div class="text-center text-muted py-5">
-  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-  Sin mantenimientos registrados para este equipo.
-</div>
+  <div class="wm-table-card">
+    {{ empty_state(
+       title="Sin mantenimientos registrados",
+       message="Aún no hay órdenes de mantenimiento para este equipo.",
+       icon="clipboard2-pulse",
+       action_label=equipo.activo and "Registrar primer mantenimiento" or none,
+       action_url=equipo.activo and url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) or none) }}
+  </div>
 {% else %}
-<p class="text-muted small mb-2">{{ paginacion.total }} registro{% if paginacion.total != 1 %}s{% endif %}</p>
-<div class="table-responsive">
-  <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Fecha</th>
-        <th>Técnico</th>
-        <th>Componentes atendidos</th>
-        <th>Próximo programado</th>
-        <th>Observaciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for mant in paginacion.items %}
-      <tr>
-        <td class="text-nowrap">{{ mant.fecha.strftime('%d/%m/%Y') }}</td>
-        <td>{{ mant.tecnico.nombre }}</td>
-        <td>
-          {% for d in mant.detalles %}
-          <span class="badge me-1 mb-1
-            {% if d.accion == 'reemplazo' %}bg-success
-            {% elif d.accion == 'limpieza' %}bg-info text-dark
-            {% else %}bg-secondary{% endif %}">
-            {{ d.componente.nombre }}
-            <small class="ms-1 fw-normal">({{ d.accion }})</small>
-          </span>
-          {% endfor %}
-        </td>
-        <td class="text-nowrap">
-          {% set proximos = mant.detalles | selectattr('proximo_mantenimiento') | map(attribute='proximo_mantenimiento') | list %}
-          {% if proximos %}{{ (proximos | min).strftime('%d/%m/%Y') }}{% else %}—{% endif %}
-        </td>
-        <td>{{ mant.observaciones or '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<p class="text-muted small mb-2">
+  <strong>{{ paginacion.total }}</strong> registro{% if paginacion.total != 1 %}s{% endif %} en total
+</p>
+<div class="wm-table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Técnico</th>
+          <th>Componentes atendidos</th>
+          <th>Próximo programado</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mant in paginacion.items %}
+        <tr>
+          <td class="text-nowrap">{{ mant.fecha.strftime('%d/%m/%Y') }}</td>
+          <td>{{ mant.tecnico.nombre }}</td>
+          <td>
+            {% for d in mant.detalles %}
+            <span class="badge me-1 mb-1
+              {% if d.accion == 'reemplazo' %}bg-success
+              {% elif d.accion == 'limpieza' %}bg-info text-dark
+              {% else %}bg-secondary{% endif %}">
+              {{ d.componente.nombre }}
+              <small class="ms-1 fw-normal">({{ d.accion }})</small>
+            </span>
+            {% endfor %}
+          </td>
+          <td class="text-nowrap">
+            {% set proximos = mant.detalles | selectattr('proximo_mantenimiento') | map(attribute='proximo_mantenimiento') | list %}
+            {% if proximos %}{{ (proximos | min).strftime('%d/%m/%Y') }}{% else %}—{% endif %}
+          </td>
+          <td class="text-muted">{{ mant.observaciones or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 {% if paginacion.pages > 1 %}
-<nav>
+<nav class="mt-3" aria-label="Paginación">
   <ul class="pagination pagination-sm justify-content-center">
     <li class="page-item {% if not paginacion.has_prev %}disabled{% endif %}">
-      <a class="page-link" href="?page={{ paginacion.prev_num }}">&#8249;</a>
+      <a class="page-link" href="?page={{ paginacion.prev_num }}" aria-label="Anterior">
+        <i class="bi bi-chevron-left"></i>
+      </a>
     </li>
     {% for p in paginacion.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
       {% if p %}
@@ -82,7 +107,9 @@
       {% endif %}
     {% endfor %}
     <li class="page-item {% if not paginacion.has_next %}disabled{% endif %}">
-      <a class="page-link" href="?page={{ paginacion.next_num }}">&#8250;</a>
+      <a class="page-link" href="?page={{ paginacion.next_num }}" aria-label="Siguiente">
+        <i class="bi bi-chevron-right"></i>
+      </a>
     </li>
   </ul>
 </nav>

@@ -1,0 +1,256 @@
+/* ─── Watermax — UI tokens y utilidades ─────────────────────────────────── */
+
+:root {
+  --wm-primary: #0d6efd;
+  --wm-primary-dark: #0a58ca;
+  --wm-surface: #f6f8fb;
+  --wm-border: #e3e7ee;
+  --wm-muted: #6c757d;
+  --wm-success-bg: #e8f6ee;
+  --wm-warning-bg: #fff6e3;
+  --wm-danger-bg: #fdecec;
+  --wm-info-bg:    #e7f3fb;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--wm-surface);
+  font-feature-settings: "tnum";
+}
+
+/* ─── Topbar ─────────────────────────────────────────────────────────────── */
+.wm-navbar {
+  box-shadow: 0 1px 0 rgba(0,0,0,.05), 0 2px 6px rgba(0,0,0,.04);
+}
+.wm-navbar .nav-link {
+  color: rgba(255,255,255,.85);
+  font-weight: 500;
+  padding: .5rem .9rem;
+  border-radius: .375rem;
+  transition: background-color .15s ease, color .15s ease;
+}
+.wm-navbar .nav-link:hover,
+.wm-navbar .nav-link:focus {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+}
+.wm-navbar .nav-link.active {
+  background: rgba(255,255,255,.18);
+  color: #fff;
+}
+.wm-navbar .dropdown-toggle::after { margin-left: .35rem; }
+.wm-navbar .navbar-brand { letter-spacing: .2px; }
+.wm-user-chip {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .35rem .7rem; border-radius: 999px;
+  background: rgba(255,255,255,.15); color: #fff;
+}
+.wm-user-chip .badge {
+  background: rgba(255,255,255,.25);
+  color: #fff; font-weight: 500;
+}
+
+/* ─── Page header ────────────────────────────────────────────────────────── */
+.wm-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+.wm-page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+}
+.wm-page-header .wm-subtitle {
+  color: var(--wm-muted);
+  margin: .25rem 0 0;
+  font-size: .925rem;
+}
+.wm-page-header .wm-actions {
+  display: flex; gap: .5rem; flex-wrap: wrap;
+}
+
+/* ─── Cards y superficies ────────────────────────────────────────────────── */
+.card {
+  border-color: var(--wm-border);
+  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+}
+.card-header {
+  background: #fff;
+  border-bottom-color: var(--wm-border);
+  font-weight: 500;
+}
+
+/* ─── Toolbar de filtros ─────────────────────────────────────────────────── */
+.wm-toolbar {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  padding: .75rem;
+  background: #fff;
+  border: 1px solid var(--wm-border);
+  border-radius: .5rem;
+  margin-bottom: 1rem;
+}
+.wm-toolbar .form-control,
+.wm-toolbar .form-select { min-width: 180px; }
+.wm-toolbar .wm-toolbar-spacer { flex: 1 1 auto; }
+
+/* ─── Tablas ─────────────────────────────────────────────────────────────── */
+.wm-table-card {
+  background: #fff;
+  border: 1px solid var(--wm-border);
+  border-radius: .5rem;
+  overflow: hidden;
+}
+.wm-table-card > .table {
+  margin-bottom: 0;
+}
+.wm-table-card .table > :not(caption) > * > * {
+  padding: .75rem .9rem;
+}
+.wm-table-card thead th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: .82rem;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  border-bottom: 1px solid var(--wm-border);
+}
+.wm-table-card .actions {
+  white-space: nowrap;
+  text-align: right;
+}
+.wm-table-card .actions > * {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0;
+}
+.wm-table-card .actions > * + * { margin-left: .25rem; }
+.wm-table-card .actions .btn { padding: .25rem .5rem; }
+.wm-table-card .actions form { display: inline-flex; }
+
+/* ─── Empty states ───────────────────────────────────────────────────────── */
+.wm-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--wm-muted);
+}
+.wm-empty .bi {
+  font-size: 2.5rem;
+  color: #cdd5e0;
+  display: block;
+  margin-bottom: .75rem;
+}
+.wm-empty h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 .25rem;
+}
+.wm-empty p { margin: 0 0 1rem; font-size: .92rem; }
+
+/* ─── Formularios ────────────────────────────────────────────────────────── */
+.wm-form-card {
+  background: #fff;
+  border: 1px solid var(--wm-border);
+  border-radius: .5rem;
+  padding: 1.5rem;
+}
+.wm-form-card .form-label {
+  font-weight: 500;
+  font-size: .92rem;
+  color: #334155;
+}
+.wm-form-card .form-text { color: #6b7280; }
+.wm-form-card .required::after {
+  content: " *";
+  color: #dc3545;
+  font-weight: 700;
+}
+.wm-form-card hr { margin: 1.5rem 0; border-color: var(--wm-border); }
+.wm-form-actions {
+  display: flex;
+  gap: .5rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--wm-border);
+}
+
+/* ─── Flash messages ─────────────────────────────────────────────────────── */
+.wm-flashes { margin-bottom: 1rem; }
+.wm-flashes .alert {
+  display: flex; gap: .65rem; align-items: flex-start;
+  border: 1px solid transparent;
+  border-radius: .5rem;
+}
+.wm-flashes .alert .bi { font-size: 1.1rem; line-height: 1.4; }
+.wm-flashes .alert-success { background: var(--wm-success-bg); border-color: #cfe9d6; color: #14532d; }
+.wm-flashes .alert-danger  { background: var(--wm-danger-bg);  border-color: #f3c7c7; color: #842029; }
+.wm-flashes .alert-warning { background: var(--wm-warning-bg); border-color: #f6dca3; color: #664d03; }
+.wm-flashes .alert-info,
+.wm-flashes .alert-primary { background: var(--wm-info-bg);    border-color: #bedcf0; color: #084c70; }
+
+/* ─── Badges y micro-estado ──────────────────────────────────────────────── */
+.wm-status {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.wm-status .bi { font-size: .85rem; }
+.wm-status-ok   { background: var(--wm-success-bg); color: #14532d; }
+.wm-status-warn { background: var(--wm-warning-bg); color: #7a5800; }
+.wm-status-bad  { background: var(--wm-danger-bg);  color: #842029; }
+.wm-status-off  { background: #eef1f6; color: #475569; }
+
+/* ─── Botones de acción en tabla ─────────────────────────────────────────── */
+.wm-icon-btn {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+
+/* ─── Foco accesible ─────────────────────────────────────────────────────── */
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+.dropdown-item:focus-visible,
+.page-link:focus-visible {
+  outline: 2px solid var(--wm-primary);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.wm-navbar .nav-link:focus-visible,
+.wm-navbar .navbar-brand:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Botón con spinner inline */
+.btn .spinner-border {
+  width: 1em; height: 1em; border-width: .15em;
+}
+
+/* ─── Misceláneo ─────────────────────────────────────────────────────────── */
+.text-monospace, .wm-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.wm-footer {
+  margin-top: 3rem;
+  padding: 1rem 0;
+  color: var(--wm-muted);
+  font-size: .85rem;
+  text-align: center;
+  border-top: 1px solid var(--wm-border);
+}
+
+/* Form-row helpers */
+.wm-form-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wm-form-grid .col-span-2 { grid-column: 1 / -1; }
+@media (max-width: 575.98px) {
+  .wm-form-grid { grid-template-columns: 1fr; }
+}

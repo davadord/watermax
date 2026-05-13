@@ -1,48 +1,63 @@
 {% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state, delete_button, icon_link %}
 {% block title %}Componentes — Watermax{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-tools text-primary"></i> Componentes</h4>
+
+{% call page_header(
+    "Componentes",
+    subtitle="Piezas o consumibles con intervalo de mantenimiento nominal.",
+    icon="puzzle",
+    breadcrumb=[("Catálogos", None), ("Componentes", None)]) %}
   <a href="{{ url_for('admin.nuevo_componente') }}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg"></i> Nuevo componente
   </a>
-</div>
+{% endcall %}
 
-<div class="table-responsive">
-  <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Nombre</th>
-        <th>Descripción</th>
-        <th>Intervalo (meses)</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for comp in componentes %}
-      <tr>
-        <td>{{ comp.nombre }}</td>
-        <td>{{ comp.descripcion or '—' }}</td>
-        <td>{{ comp.intervalo_nominal }}</td>
-        <td class="text-end">
-          <a href="{{ url_for('admin.editar_componente', id=comp.id) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-pencil"></i>
-          </a>
-          <form method="POST" action="{{ url_for('admin.eliminar_componente', id=comp.id) }}" class="d-inline"
-                onsubmit="return confirm('¿Eliminar el componente {{ comp.nombre }}?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-              <i class="bi bi-trash"></i>
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="4" class="text-center text-muted py-4">No hay componentes registrados.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% if not componentes %}
+  <div class="wm-table-card">
+    {{ empty_state(
+       title="Aún no hay componentes",
+       message="Registra los filtros, membranas y demás piezas que componen tus equipos.",
+       icon="puzzle",
+       action_label="Nuevo componente",
+       action_url=url_for('admin.nuevo_componente')) }}
+  </div>
+{% else %}
+<div class="wm-table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Descripción</th>
+          <th>Intervalo nominal</th>
+          <th class="actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for comp in componentes %}
+        <tr>
+          <td><strong>{{ comp.nombre }}</strong></td>
+          <td>{{ comp.descripcion or '—' }}</td>
+          <td>
+            <span class="wm-status wm-status-off">
+              <i class="bi bi-calendar"></i>
+              {{ comp.intervalo_nominal }} mes{% if comp.intervalo_nominal != 1 %}es{% endif %}
+            </span>
+          </td>
+          <td class="actions">
+            {{ icon_link(url_for('admin.editar_componente', id=comp.id), "pencil", "Editar") }}
+            {{ delete_button(
+                url_for('admin.eliminar_componente', id=comp.id),
+                title="¿Eliminar el componente “" ~ comp.nombre ~ "”?",
+                detail="Si está asociado a tipos de equipo, las asociaciones también se eliminarán.",
+                label_action="Sí, eliminar") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% endif %}
 {% endblock %}

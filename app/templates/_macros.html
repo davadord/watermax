@@ -1,0 +1,132 @@
+{# ────────────────────────────────────────────────────────────────────────
+   Watermax — macros reutilizables
+   - page_header()                cabecera consistente + breadcrumb
+   - empty_state()                estado vacío con CTA
+   - delete_button() / confirm_button()  formularios POST + modal global
+   - icon_link()                  botón-link icono con tooltip y aria-label
+   - field_value() / field_selected() / field_checked()
+                                  helpers para repoblar formularios tras
+                                  un POST que falló validación
+   ────────────────────────────────────────────────────────────────────── #}
+
+{# Cabecera de página con título, subtítulo opcional y bloque de acciones.
+   Las acciones se pasan como `caller()`; si no hay acciones, no se renderiza
+   el contenedor (evita huecos visuales con `gap`). #}
+{% macro page_header(title, subtitle=None, icon=None, breadcrumb=None) %}
+  <div class="wm-page-header">
+    <div>
+      {% if breadcrumb %}
+        <nav aria-label="Ruta de navegación">
+          <ol class="breadcrumb mb-2 small">
+            {% for label, url in breadcrumb %}
+              {% if loop.last or not url %}
+                <li class="breadcrumb-item active" aria-current="page">{{ label }}</li>
+              {% else %}
+                <li class="breadcrumb-item"><a href="{{ url }}">{{ label }}</a></li>
+              {% endif %}
+            {% endfor %}
+          </ol>
+        </nav>
+      {% endif %}
+      <h1>
+        {% if icon %}<i class="bi bi-{{ icon }} text-primary me-1" aria-hidden="true"></i>{% endif %}{{ title }}
+      </h1>
+      {% if subtitle %}<p class="wm-subtitle">{{ subtitle }}</p>{% endif %}
+    </div>
+    {% if caller %}
+      {% set actions = caller() %}
+      {% if actions and actions.strip() %}
+        <div class="wm-actions">{{ actions|safe }}</div>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{# Estado vacío con CTA opcional. #}
+{% macro empty_state(title, message=None, icon="inbox",
+                     action_label=None, action_url=None,
+                     action_icon="plus-lg", action_variant="primary") %}
+  <div class="wm-empty">
+    <i class="bi bi-{{ icon }}" aria-hidden="true"></i>
+    <h3>{{ title }}</h3>
+    {% if message %}<p>{{ message }}</p>{% endif %}
+    {% if action_label and action_url %}
+      <a href="{{ action_url }}" class="btn btn-{{ action_variant }} btn-sm">
+        <i class="bi bi-{{ action_icon }}" aria-hidden="true"></i> {{ action_label }}
+      </a>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{# Botón de eliminar con confirmación por modal. #}
+{% macro delete_button(action_url, title="¿Eliminar este registro?", detail=None,
+                       label_action="Sí, eliminar", variant="danger",
+                       icon="trash", tooltip="Eliminar") %}
+  <form method="POST" action="{{ action_url }}"
+        data-confirm="{{ title }}"
+        {% if detail %}data-confirm-detail="{{ detail }}"{% endif %}
+        data-confirm-action="{{ label_action }}"
+        data-confirm-variant="{{ variant }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-outline-danger wm-icon-btn"
+            data-bs-toggle="tooltip" title="{{ tooltip }}"
+            aria-label="{{ tooltip }}">
+      <i class="bi bi-{{ icon }}" aria-hidden="true"></i>
+    </button>
+  </form>
+{% endmacro %}
+
+{# Confirm genérico para acciones no destructivas (reactivar, restaurar). #}
+{% macro confirm_button(action_url, title, detail=None, label_action="Confirmar",
+                        variant="primary", btn_class="btn-outline-success",
+                        icon="check-lg", label=None) %}
+  <form method="POST" action="{{ action_url }}"
+        data-confirm="{{ title }}"
+        {% if detail %}data-confirm-detail="{{ detail }}"{% endif %}
+        data-confirm-action="{{ label_action }}"
+        data-confirm-variant="{{ variant }}"
+        class="d-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-sm {{ btn_class }}"
+            {% if label %}aria-label="{{ label }}"{% else %}aria-label="{{ title }}"{% endif %}>
+      <i class="bi bi-{{ icon }}" aria-hidden="true"></i>{% if label %} {{ label }}{% endif %}
+    </button>
+  </form>
+{% endmacro %}
+
+{# Botón-link icono (editar, ver historial, etc.). #}
+{% macro icon_link(url, icon, tooltip, variant="outline-secondary") %}
+  <a href="{{ url }}" class="btn btn-{{ variant }} wm-icon-btn"
+     data-bs-toggle="tooltip" title="{{ tooltip }}"
+     aria-label="{{ tooltip }}">
+    <i class="bi bi-{{ icon }}" aria-hidden="true"></i>
+  </a>
+{% endmacro %}
+
+{# ── Helpers de repoblación tras error de validación ─────────────────── #}
+{# Devuelve request.form[name] si venimos de un POST; si no, fallback. #}
+{% macro field_value(name, fallback="") -%}
+  {%- if request.method == "POST" -%}
+    {{ request.form.get(name, "") }}
+  {%- else -%}
+    {{ fallback if fallback is not none else "" }}
+  {%- endif -%}
+{%- endmacro %}
+
+{# Devuelve "selected" si el valor coincide con lo enviado o el fallback. #}
+{% macro field_selected(name, value, fallback=None) -%}
+  {%- if request.method == "POST" -%}
+    {%- if request.form.get(name)|string == value|string -%}selected{%- endif -%}
+  {%- elif fallback is not none and fallback|string == value|string -%}
+    selected
+  {%- endif -%}
+{%- endmacro %}
+
+{# Devuelve "checked" si el name (con value) está marcado o el fallback es True. #}
+{% macro field_checked(name, value, fallback=False) -%}
+  {%- if request.method == "POST" -%}
+    {%- if value|string in request.form.getlist(name) -%}checked{%- endif -%}
+  {%- elif fallback -%}
+    checked
+  {%- endif -%}
+{%- endmacro %}

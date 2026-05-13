@@ -36,9 +36,18 @@ def create_app(config_name="default"):
     app.register_blueprint(reports_bp, url_prefix="/reports")
 
     from flask import redirect, url_for
+    from flask_login import current_user
 
     @app.route("/")
     def index():
         return redirect(url_for("reports.dashboard"))
+
+    @app.context_processor
+    def inject_globals():
+        is_admin = (
+            current_user.is_authenticated
+            and getattr(current_user, "rol", None) in ("propietario", "administrativo")
+        )
+        return {"is_admin": is_admin}
 
     return app

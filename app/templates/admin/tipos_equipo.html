@@ -1,50 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Tipos de Equipo — Watermax{% endblock %}
+{% from "_macros.html" import page_header, empty_state, delete_button, icon_link %}
+{% block title %}Tipos de equipo — Watermax{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-cpu-fill text-primary"></i> Tipos de Equipo</h4>
+
+{% call page_header(
+    "Tipos de equipo",
+    subtitle="Modelos de purificador y los componentes que los conforman.",
+    icon="cpu-fill",
+    breadcrumb=[("Catálogos", None), ("Tipos de equipo", None)]) %}
   <a href="{{ url_for('admin.nuevo_tipo_equipo') }}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-lg"></i> Nuevo tipo
   </a>
-</div>
+{% endcall %}
 
-<div class="table-responsive">
-  <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Nombre</th>
-        <th>Marca</th>
-        <th>Componentes</th>
-        <th>Equipos instalados</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for tipo in tipos %}
-      <tr>
-        <td>{{ tipo.nombre }}</td>
-        <td>{{ tipo.marca or '—' }}</td>
-        <td>{{ tipo.componentes | length }}</td>
-        <td>{{ tipo.equipos | length }}</td>
-        <td class="text-end">
-          <a href="{{ url_for('admin.editar_tipo_equipo', id=tipo.id) }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-pencil"></i>
-          </a>
-          <form method="POST" action="{{ url_for('admin.eliminar_tipo_equipo', id=tipo.id) }}" class="d-inline"
-                onsubmit="return confirm('¿Eliminar el tipo {{ tipo.nombre }}?')">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-              <i class="bi bi-trash"></i>
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="5" class="text-center text-muted py-4">No hay tipos de equipo registrados.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{% if not tipos %}
+  <div class="wm-table-card">
+    {{ empty_state(
+       title="Aún no hay tipos de equipo",
+       message="Define al menos un modelo con sus componentes antes de registrar instalaciones.",
+       icon="cpu",
+       action_label="Nuevo tipo",
+       action_url=url_for('admin.nuevo_tipo_equipo')) }}
+  </div>
+{% else %}
+<div class="wm-table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Marca</th>
+          <th>Componentes</th>
+          <th>Equipos instalados</th>
+          <th class="actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tipo in tipos %}
+        <tr>
+          <td><strong>{{ tipo.nombre }}</strong></td>
+          <td>{{ tipo.marca or '—' }}</td>
+          <td>
+            {% if tipo.componentes %}
+              <span class="badge bg-primary-subtle text-primary">{{ tipo.componentes|length }}</span>
+            {% else %}
+              <span class="wm-status wm-status-warn"><i class="bi bi-exclamation-triangle"></i> 0</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if tipo.equipos %}
+              <span class="badge bg-info-subtle text-info-emphasis">{{ tipo.equipos|length }}</span>
+            {% else %}
+              <span class="text-muted">0</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            {{ icon_link(url_for('admin.editar_tipo_equipo', id=tipo.id), "pencil", "Editar") }}
+            {{ delete_button(
+                url_for('admin.eliminar_tipo_equipo', id=tipo.id),
+                title="¿Eliminar el tipo “" ~ tipo.nombre ~ "”?",
+                detail="No podrá eliminarse si tiene equipos instalados asociados.",
+                label_action="Sí, eliminar") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% endif %}
 {% endblock %}

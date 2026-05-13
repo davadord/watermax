@@ -6,53 +6,145 @@
   <title>{% block title %}Watermax{% endblock %}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
 
+{% set ep = request.endpoint or '' %}
+
 {% if current_user.is_authenticated %}
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-  <div class="container-fluid">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary wm-navbar">
+  <div class="container-xl">
     <a class="navbar-brand fw-bold" href="{{ url_for('reports.dashboard') }}">
       <i class="bi bi-droplet-fill"></i> Watermax
     </a>
-    <div class="navbar-nav ms-auto align-items-center">
-      <a class="nav-link text-white" href="{{ url_for('admin.clientes') }}">Clientes</a>
-      <a class="nav-link text-white" href="{{ url_for('admin.equipos') }}">Equipos</a>
 
-      <div class="nav-item dropdown">
-        <a class="nav-link text-white dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-          Configuración
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" href="{{ url_for('admin.zonas') }}">Zonas</a></li>
-          <li><a class="dropdown-item" href="{{ url_for('admin.tipos_equipo') }}">Tipos de equipo</a></li>
-          <li><a class="dropdown-item" href="{{ url_for('admin.componentes') }}">Componentes</a></li>
-        </ul>
-      </div>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#wm-nav" aria-controls="wm-nav" aria-expanded="false"
+            aria-label="Abrir menú">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
-      <a class="nav-link text-white" href="{{ url_for('reports.dashboard') }}">Dashboard</a>
-      <a class="nav-link text-white" href="{{ url_for('auth.logout') }}">
-        <i class="bi bi-box-arrow-right"></i> Salir
-      </a>
+    <div class="collapse navbar-collapse" id="wm-nav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link {% if ep.startswith('reports.') %}active{% endif %}"
+             href="{{ url_for('reports.dashboard') }}">
+            <i class="bi bi-speedometer2"></i> Dashboard
+          </a>
+        </li>
+        {% if is_admin %}
+        <li class="nav-item">
+          <a class="nav-link {% if ep in ('admin.clientes', 'admin.nuevo_cliente', 'admin.editar_cliente') %}active{% endif %}"
+             href="{{ url_for('admin.clientes') }}">
+            <i class="bi bi-people-fill"></i> Clientes
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if ep in ('admin.equipos', 'admin.nuevo_equipo', 'admin.editar_equipo') %}active{% endif %}"
+             href="{{ url_for('admin.equipos') }}">
+            <i class="bi bi-tools"></i> Equipos
+          </a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if ep.startswith('admin.') and ep not in ('admin.clientes', 'admin.nuevo_cliente', 'admin.editar_cliente', 'admin.equipos', 'admin.nuevo_equipo', 'admin.editar_equipo') %}active{% endif %}"
+             href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-gear"></i> Catálogos
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ url_for('admin.zonas') }}">
+              <i class="bi bi-geo-alt me-1"></i> Zonas</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.tipos_equipo') }}">
+              <i class="bi bi-cpu me-1"></i> Tipos de equipo</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.componentes') }}">
+              <i class="bi bi-puzzle me-1"></i> Componentes</a></li>
+          </ul>
+        </li>
+        {% endif %}
+      </ul>
+
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle d-flex align-items-center gap-2"
+             href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="wm-user-chip">
+              <i class="bi bi-person-circle"></i>
+              <span class="d-none d-md-inline">{{ current_user.nombre }}</span>
+              <span class="badge">{{ current_user.rol|capitalize }}</span>
+            </span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li class="px-3 py-2 small text-muted">
+              <div class="fw-semibold text-dark">{{ current_user.nombre }}</div>
+              <div>{{ current_user.email }}</div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+              </a>
+            </li>
+          </ul>
+        </li>
+      </ul>
     </div>
   </div>
 </nav>
 {% endif %}
 
-<div class="container mt-4">
+<main class="container-xl mt-4 mb-5">
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }} alert-dismissible fade show">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {% if messages %}
+      <div class="wm-flashes">
+        {% for category, message in messages %}
+          {% set cat = 'info' if category == 'message' else category %}
+          {% set icon = {
+              'success': 'check-circle-fill',
+              'danger':  'exclamation-triangle-fill',
+              'warning': 'exclamation-circle-fill',
+              'info':    'info-circle-fill',
+              'primary': 'info-circle-fill'
+            }.get(cat, 'info-circle-fill') %}
+          <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+            <i class="bi bi-{{ icon }}"></i>
+            <div class="flex-grow-1">{{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+          </div>
+        {% endfor %}
       </div>
-    {% endfor %}
+    {% endif %}
   {% endwith %}
 
   {% block content %}{% endblock %}
+</main>
+
+{% if current_user.is_authenticated %}
+<footer class="wm-footer">
+  Watermax · Mantenimiento preventivo de purificadores
+</footer>
+
+{# ── Modal global de confirmación (alimentado por data-confirm en formularios) #}
+<div class="modal fade" id="wm-confirm-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title wm-confirm-title">¿Confirmar acción?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="wm-confirm-detail mb-0 text-muted"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger wm-confirm-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
 </div>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

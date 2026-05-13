@@ -1,78 +1,127 @@
 {% extends "base.html" %}
-{% block title %}Nuevo mantenimiento — Watermax{% endblock %}
+{% from "_macros.html" import page_header, field_value %}
+{% block title %}Registrar mantenimiento — Watermax{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8">
-    <h4 class="mb-1">
-      <i class="bi bi-clipboard2-pulse text-primary"></i> Registrar mantenimiento
-    </h4>
-    <p class="text-muted mb-4">
-      {{ equipo.tipo_equipo.nombre }}
-      {% if equipo.tipo_equipo.marca %} — {{ equipo.tipo_equipo.marca }}{% endif %}
-      · {{ equipo.cliente.nombre }}
-      {% if equipo.numero_serie %}<small class="ms-1">(S/N: {{ equipo.numero_serie }})</small>{% endif %}
-    </p>
 
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% set _bc = [] %}
+{% if is_admin %}{% set _ = _bc.append(("Equipos", url_for('admin.equipos'))) %}
+{% else %}{% set _ = _bc.append(("Dashboard", url_for('reports.dashboard'))) %}{% endif %}
+{% set _ = _bc.append(("Historial", url_for('maintenance.historial_equipo', equipo_id=equipo.id))) %}
+{% set _ = _bc.append(("Nuevo mantenimiento", None)) %}
 
-      <div class="row mb-3">
-        <div class="col-md-4">
-          <label class="form-label">Fecha <span class="text-danger">*</span></label>
-          <input type="date" name="fecha" class="form-control" required
-                 value="{{ hoy.strftime('%Y-%m-%d') }}" max="{{ hoy.strftime('%Y-%m-%d') }}">
-        </div>
-        <div class="col-md-8">
-          <label class="form-label">Observaciones generales</label>
-          <input type="text" name="observaciones" class="form-control" maxlength="500"
-                 placeholder="Condiciones del equipo, acceso, novedades…">
-        </div>
+{{ page_header(
+    "Registrar mantenimiento",
+    subtitle=equipo.tipo_equipo.nombre
+             ~ (' · ' ~ equipo.tipo_equipo.marca if equipo.tipo_equipo.marca else '')
+             ~ ' · ' ~ equipo.cliente.nombre
+             ~ (' · S/N ' ~ equipo.numero_serie if equipo.numero_serie else ''),
+    icon="clipboard2-pulse",
+    breadcrumb=_bc) }}
+
+<form method="POST" novalidate data-autofocus>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="wm-form-card mb-3">
+    <h2 class="h6 text-uppercase text-muted mb-3">Datos del trabajo</h2>
+    <div class="wm-form-grid">
+      <div>
+        <label class="form-label required" for="fecha">Fecha de intervención</label>
+        <input type="date" id="fecha" name="fecha" class="form-control" required
+               value="{{ hoy.strftime('%Y-%m-%d') }}" max="{{ hoy.strftime('%Y-%m-%d') }}">
       </div>
-
-      <h6 class="mt-4 mb-3">Componentes intervenidos</h6>
-      <p class="text-muted small">Selecciona acción solo para los componentes atendidos en esta orden.</p>
-
-      <div class="table-responsive">
-        <table class="table table-bordered align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Componente</th>
-              <th style="width:200px">Acción</th>
-              <th>Notas</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for comp in componentes %}
-            <tr>
-              <td>
-                <strong>{{ comp.nombre }}</strong>
-                <div class="text-muted small">Intervalo nominal: {{ comp.intervalo_nominal }} mes{{ 'es' if comp.intervalo_nominal != 1 else '' }}</div>
-              </td>
-              <td>
-                <select name="accion_{{ comp.id }}" class="form-select form-select-sm">
-                  <option value="">— sin intervención —</option>
-                  <option value="reemplazo">Reemplazo</option>
-                  <option value="limpieza">Limpieza</option>
-                  <option value="revision">Revisión</option>
-                </select>
-              </td>
-              <td>
-                <input type="text" name="notas_{{ comp.id }}" class="form-control form-control-sm"
-                       maxlength="200" placeholder="Opcional">
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div>
+        <label class="form-label" for="observaciones">Observaciones generales <span class="text-muted small">(opcional)</span></label>
+        <input type="text" id="observaciones" name="observaciones" class="form-control" maxlength="500"
+               placeholder="Condiciones del equipo, acceso, novedades…">
       </div>
-
-      <div class="d-flex gap-2 mt-3">
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-check-lg"></i> Guardar mantenimiento
-        </button>
-        <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-secondary">Cancelar</a>
-      </div>
-    </form>
+    </div>
   </div>
-</div>
+
+  <div class="wm-form-card">
+    <div class="d-flex justify-content-between align-items-end mb-2 flex-wrap gap-2">
+      <div>
+        <h2 class="h6 text-uppercase text-muted mb-1">Componentes intervenidos</h2>
+        <p class="text-muted small mb-0">
+          Marca una acción solo para los componentes atendidos. Al menos uno es obligatorio.
+        </p>
+      </div>
+      {% if componentes %}
+      <div class="btn-group btn-group-sm" role="group" aria-label="Aplicar acción a todos">
+        <button type="button" class="btn btn-outline-secondary" data-bulk-action="">— ninguno —</button>
+        <button type="button" class="btn btn-outline-success" data-bulk-action="reemplazo">Todo reemplazo</button>
+        <button type="button" class="btn btn-outline-info" data-bulk-action="limpieza">Todo limpieza</button>
+        <button type="button" class="btn btn-outline-secondary" data-bulk-action="revision">Todo revisión</button>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if not componentes %}
+      <div class="alert alert-warning d-flex gap-2 mt-2 mb-0">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div>
+          Este tipo de equipo no tiene componentes asociados. Asocia componentes desde
+          <a href="{{ url_for('admin.editar_tipo_equipo', id=equipo.tipo_equipo_id) }}" class="alert-link">el tipo de equipo</a>
+          antes de continuar.
+        </div>
+      </div>
+    {% else %}
+    <div class="table-responsive mt-2">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Componente</th>
+            <th style="width: 220px;">Acción</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for comp in componentes %}
+          <tr>
+            <td>
+              <strong>{{ comp.nombre }}</strong>
+              <div class="text-muted small">
+                Intervalo nominal: {{ comp.intervalo_nominal }} mes{% if comp.intervalo_nominal != 1 %}es{% endif %}
+              </div>
+            </td>
+            <td>
+              <select name="accion_{{ comp.id }}" class="form-select form-select-sm wm-accion">
+                <option value="">— sin intervención —</option>
+                <option value="reemplazo">Reemplazo</option>
+                <option value="limpieza">Limpieza</option>
+                <option value="revision">Revisión</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" name="notas_{{ comp.id }}" class="form-control form-control-sm"
+                     maxlength="200" placeholder="Opcional">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="d-flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary" {% if not componentes %}disabled{% endif %}>
+      <i class="bi bi-check-lg"></i> Guardar mantenimiento
+    </button>
+    <a href="{{ url_for('maintenance.historial_equipo', equipo_id=equipo.id) }}"
+       class="btn btn-light">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll("[data-bulk-action]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var val = btn.dataset.bulkAction;
+    document.querySelectorAll("select.wm-accion").forEach(function (s) {
+      s.value = val;
+    });
+  });
+});
+</script>
 {% endblock %}
