@@ -28,9 +28,18 @@
     <div class="collapse navbar-collapse" id="wm-nav">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link {% if ep.startswith('reports.') %}active{% endif %}"
+          <a class="nav-link {% if ep == 'reports.dashboard' %}active{% endif %}"
              href="{{ url_for('reports.dashboard') }}">
             <i class="bi bi-speedometer2"></i> Dashboard
+            {% if alertas_count > 0 %}
+              <span class="badge bg-danger rounded-pill ms-1">{{ alertas_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if ep == 'reports.criticos' %}active{% endif %}"
+             href="{{ url_for('reports.criticos') }}">
+            <i class="bi bi-exclamation-triangle-fill"></i> Críticos
           </a>
         </li>
         {% if is_admin %}

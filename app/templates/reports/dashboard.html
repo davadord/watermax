@@ -29,10 +29,43 @@
 </form>
 
 {% if not zona_id %}
+  <div class="row g-3 mb-4">
+    <div class="col-sm-4">
+      <div class="card text-center border-danger">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-danger">{{ resumen_global.vencidos }}</div>
+          <div class="small text-muted">Vencidos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4">
+      <div class="card text-center border-warning">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-warning">{{ resumen_global.proximos }}</div>
+          <div class="small text-muted">Próximos a vencer</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4">
+      <div class="card text-center">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold">{{ resumen_global.total }}</div>
+          <div class="small text-muted">Total críticos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% if resumen_global.total > 0 %}
+    <div class="text-end mb-3">
+      <a href="{{ url_for('reports.criticos') }}" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-exclamation-triangle-fill"></i> Ver todos los equipos críticos
+      </a>
+    </div>
+  {% endif %}
   <div class="card">
     <div class="card-body">
       {{ empty_state(
-        title="Selecciona una zona para comenzar",
+        title="Selecciona una zona para ver el detalle",
         message="El dashboard muestra los equipos con mantenimientos vencidos o próximos. Filtra por zona para ver la operación del día.",
         icon="geo-alt") }}
     </div>
@@ -93,8 +126,8 @@
             </tr>
           </thead>
           <tbody>
-            {% for v in item.vencimientos %}
-            <tr class="{% if v.urgencia == 'vencido' %}table-danger{% elif v.urgencia == 'proximo' %}table-warning{% endif %}">
+            {% for v in item.vencimientos if v.urgencia != 'en_plazo' %}
+            <tr class="{% if v.urgencia == 'vencido' %}table-danger{% else %}table-warning{% endif %}">
               <td>{{ v.componente.nombre }}</td>
               <td class="text-nowrap">{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
               <td class="text-nowrap">

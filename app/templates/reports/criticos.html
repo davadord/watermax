@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state %}
+{% block title %}Equipos críticos — Watermax{% endblock %}
+
+{% block content %}
+
+{{ page_header(
+    "Equipos críticos",
+    subtitle="Equipos con componentes vencidos o próximos a vencer.",
+    icon="exclamation-triangle-fill") }}
+
+{# ── Filtros ── #}
+<form method="GET" class="wm-toolbar mb-4 d-print-none">
+  <label for="zona_id" class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+    <i class="bi bi-geo-alt"></i> Zona
+  </label>
+  <select name="zona_id" id="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">Todas las zonas</option>
+    {% for zona in zonas %}
+      <option value="{{ zona.id }}" {% if zona.id == zona_id %}selected{% endif %}>
+        {{ zona.nombre }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label for="urgencia" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
+    <i class="bi bi-filter"></i> Estado
+  </label>
+  <select name="urgencia" id="urgencia" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">Todos los estados</option>
+    <option value="vencido"  {% if urgencia == 'vencido' %}selected{% endif %}>Solo vencidos</option>
+    <option value="proximo"  {% if urgencia == 'proximo' %}selected{% endif %}>Solo próximos</option>
+  </select>
+
+  {% if zona_id or urgencia %}
+    <button type="button" class="btn btn-link btn-sm text-decoration-none" data-filter-reset>
+      Limpiar
+    </button>
+  {% endif %}
+
+  <div class="wm-toolbar-spacer"></div>
+  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+    <i class="bi bi-printer"></i> Imprimir
+  </button>
+</form>
+
+{# ── Tabla ── #}
+{% if not equipos_criticos %}
+  <div class="card">
+    <div class="card-body">
+      {{ empty_state(
+        title="Sin equipos críticos",
+        message="No hay equipos con vencimientos pendientes para los filtros seleccionados.",
+        icon="check-circle") }}
+    </div>
+  </div>
+{% else %}
+  <p class="text-muted small mb-3 d-print-none">
+    {{ equipos_criticos|length }} equipo{% if equipos_criticos|length != 1 %}s{% endif %} con vencimientos.
+    <span class="text-muted">Haz clic en una fila para ver todos los componentes.</span>
+  </p>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th class="d-print-none" style="width:1.5rem"></th>
+          <th>Cliente</th>
+          <th>Zona</th>
+          <th>Equipo</th>
+          <th>Peor componente</th>
+          <th>Fecha vencimiento</th>
+          <th>Días</th>
+          <th>Estado</th>
+          <th class="d-print-none"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in equipos_criticos %}
+          {% set peor = item.componentes_criticos[0] %}
+          {% set row_id = "det-" ~ loop.index %}
+
+          {# ── Fila principal ── #}
+          <tr class="{% if item.urgencia_maxima == 'vencido' %}table-danger{% else %}table-warning{% endif %} wm-critico-row"
+              data-target="#{{ row_id }}"
+              aria-expanded="false" style="cursor:pointer">
+            <td class="d-print-none text-center">
+              <i class="bi bi-chevron-right wm-chevron" style="font-size:.75rem; transition:transform .2s"></i>
+            </td>
+            <td class="fw-semibold">{{ item.equipo.cliente.nombre }}</td>
+            <td>{{ item.equipo.zona.nombre }}</td>
+            <td>
+              <span class="badge bg-secondary">{{ item.equipo.tipo_equipo.nombre }}</span>
+              {% if item.equipo.numero_serie %}
+                <br><small class="text-muted">S/N {{ item.equipo.numero_serie }}</small>
+              {% endif %}
+            </td>
+            <td>{{ peor.componente.nombre }}</td>
+            <td class="text-nowrap">{{ peor.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
+            <td class="text-nowrap">
+              {% if peor.dias_restantes < 0 %}
+                hace {{ -peor.dias_restantes }} d
+              {% elif peor.dias_restantes == 0 %}
+                hoy
+              {% else %}
+                en {{ peor.dias_restantes }} d
+              {% endif %}
+            </td>
+            <td>
+              {% if item.urgencia_maxima == 'vencido' %}
+                <span class="wm-status wm-status-bad"><i class="bi bi-x-circle-fill"></i> Vencido</span>
+              {% else %}
+                <span class="wm-status wm-status-warn"><i class="bi bi-clock"></i> Próximo</span>
+              {% endif %}
+            </td>
+            <td class="text-end d-print-none">
+              <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=item.equipo.id) }}"
+                 class="btn btn-primary btn-sm"
+                 onclick="event.stopPropagation()">
+                <i class="bi bi-clipboard2-plus"></i> Registrar
+              </a>
+            </td>
+          </tr>
+
+          {# ── Fila de detalle colapsable ── #}
+          <tr class="collapse" id="{{ row_id }}">
+            <td colspan="9" class="p-0">
+              <div class="px-4 py-3 bg-white border-bottom">
+                <p class="small fw-semibold text-muted mb-2 text-uppercase">
+                  Componentes críticos — {{ item.equipo.tipo_equipo.nombre }}
+                </p>
+                <table class="table table-sm mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Componente</th>
+                      <th>Fecha proyectada</th>
+                      <th>Días</th>
+                      <th>Estado</th>
+                      <th>Fuente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for v in item.componentes_criticos %}
+                    <tr class="{% if v.urgencia == 'vencido' %}table-danger{% else %}table-warning{% endif %}">
+                      <td>{{ v.componente.nombre }}</td>
+                      <td class="text-nowrap">{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
+                      <td class="text-nowrap">
+                        {% if v.dias_restantes < 0 %}
+                          hace {{ -v.dias_restantes }} d
+                        {% elif v.dias_restantes == 0 %}
+                          hoy
+                        {% else %}
+                          en {{ v.dias_restantes }} d
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if v.urgencia == 'vencido' %}
+                          <span class="wm-status wm-status-bad"><i class="bi bi-x-circle-fill"></i> Vencido</span>
+                        {% else %}
+                          <span class="wm-status wm-status-warn"><i class="bi bi-clock"></i> Próximo</span>
+                        {% endif %}
+                      </td>
+                      <td><small class="text-muted">{{ v.fuente }}</small></td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelector('[data-filter-reset]')?.addEventListener('click', () => {
+    window.location = '{{ url_for("reports.criticos") }}';
+  });
+
+  document.querySelectorAll('.wm-critico-row').forEach(row => {
+    const target = document.querySelector(row.dataset.target);
+    const chevron = row.querySelector('.wm-chevron');
+    const collapse = new bootstrap.Collapse(target, { toggle: false });
+
+    row.addEventListener('click', e => {
+      if (e.target.closest('a, button')) return;
+      collapse.toggle();
+    });
+
+    target.addEventListener('show.bs.collapse',  () => chevron.style.transform = 'rotate(90deg)');
+    target.addEventListener('hide.bs.collapse',  () => chevron.style.transform = 'rotate(0deg)');
+  });
+</script>
+{% endblock %}

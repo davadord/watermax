@@ -5,12 +5,16 @@ de ciclos reales del historial de intervenciones.
 """
 from datetime import date, timedelta
 from statistics import mean
+from sqlalchemy.orm import joinedload
 from app.models.maintenance import DetalleMantenimiento, Mantenimiento
+from app.models.equipment import EquipoInstalado, TipoEquipo, TipoEquipoComponente
 
 
 URGENCIA_VENCIDO = "vencido"
-URGENCIA_PROXIMO = "proximo"      # <= 7 días
+URGENCIA_PROXIMO = "proximo"
 URGENCIA_EN_PLAZO = "en_plazo"
+
+UMBRAL_ALERTA_DIAS = 15  # componentes con <= este valor se marcan como próximos
 
 
 def calcular_vencimientos(equipo):
@@ -26,7 +30,7 @@ def calcular_vencimientos(equipo):
 
     for tec in equipo.tipo_equipo.componentes:
         comp = tec.componente
-        intervalo_nominal = comp.intervalo_nominal  # meses
+        intervalo_nominal = comp.intervalo_nominal  # días
 
         # Solo reemplazo resetea el reloj — limpieza y revision no cuentan
         historial = (
@@ -69,7 +73,7 @@ def calcular_vencimientos(equipo):
 
         if dias_restantes < 0:
             urgencia = URGENCIA_VENCIDO
-        elif dias_restantes <= 15:
+        elif dias_restantes <= UMBRAL_ALERTA_DIAS:
             urgencia = URGENCIA_PROXIMO
         else:
             urgencia = URGENCIA_EN_PLAZO
@@ -128,3 +132,65 @@ def calcular_proximo_componente(equipo, componente, fecha_intervencion):
             intervalo_dias = intervalo_real
 
     return fecha_intervencion + timedelta(days=intervalo_dias)
+
+
+def get_equipos_criticos(zona_id=None, urgencia=None):
+    """
+    Retorna lista de dicts para todos los equipos activos que tienen al menos
+    un componente vencido o próximo a vencer.
+
+    Carga relaciones con joinedload para evitar N+1 queries.
+    Filtra opcionalmente por zona_id y/o urgencia ('vencido' | 'proximo').
+
+    Cada dict:
+    {
+        equipo, urgencia_maxima, dias_min, componentes_criticos: [
+            {componente, fecha_proyectada, urgencia, dias_restantes}
+        ]
+    }
+    """
+    orden_urgencia = {URGENCIA_VENCIDO: 0, URGENCIA_PROXIMO: 1, URGENCIA_EN_PLAZO: 2}
+
+    query = (
+        EquipoInstalado.query
+        .filter_by(activo=True)
+        .options(
+            joinedload(EquipoInstalado.tipo_equipo)
+                .joinedload(TipoEquipo.componentes)
+                .joinedload(TipoEquipoComponente.componente),
+            joinedload(EquipoInstalado.zona),
+            joinedload(EquipoInstalado.cliente),
+        )
+    )
+    if zona_id:
+        query = query.filter_by(zona_id=zona_id)
+
+    equipos = query.all()
+
+    resultado = []
+    for equipo in equipos:
+        vencimientos = calcular_vencimientos(equipo)
+        criticos = [
+            v for v in vencimientos
+            if v["urgencia"] in (URGENCIA_VENCIDO, URGENCIA_PROXIMO)
+        ]
+        if not criticos:
+            continue
+
+        # Filtro opcional por urgencia exacta
+        if urgencia and urgencia in (URGENCIA_VENCIDO, URGENCIA_PROXIMO):
+            if not any(v["urgencia"] == urgencia for v in criticos):
+                continue
+
+        urgencia_maxima = min(criticos, key=lambda v: orden_urgencia[v["urgencia"]])["urgencia"]
+        dias_min = min(v["dias_restantes"] for v in criticos)
+
+        resultado.append({
+            "equipo": equipo,
+            "urgencia_maxima": urgencia_maxima,
+            "dias_min": dias_min,
+            "componentes_criticos": criticos,
+        })
+
+    resultado.sort(key=lambda x: (orden_urgencia[x["urgencia_maxima"]], x["dias_min"]))
+    return resultado

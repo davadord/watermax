@@ -44,10 +44,18 @@ def create_app(config_name="default"):
 
     @app.context_processor
     def inject_globals():
+        from flask import request as _req
+        from app.services.prediction_service import get_equipos_criticos, URGENCIA_VENCIDO
         is_admin = (
             current_user.is_authenticated
             and getattr(current_user, "rol", None) in ("propietario", "administrativo")
         )
-        return {"is_admin": is_admin}
+        alertas_count = 0
+        if current_user.is_authenticated and (_req.endpoint or "").startswith("reports."):
+            criticos = get_equipos_criticos()
+            alertas_count = sum(
+                1 for item in criticos if item["urgencia_maxima"] == URGENCIA_VENCIDO
+            )
+        return {"is_admin": is_admin, "alertas_count": alertas_count}
 
     return app
