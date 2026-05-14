@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, request, Response, abort
+from flask import Blueprint, render_template, request, Response, abort, flash, redirect, url_for
 from flask_login import login_required
+from sqlalchemy import select
 
 from datetime import date
+from app import db
 from app.models.client import Zona
 from app.models.equipment import EquipoInstalado
 from app.services.prediction_service import (
@@ -17,11 +19,15 @@ reports_bp = Blueprint("reports", __name__)
 @login_required
 def dashboard():
     zona_id = request.args.get("zona_id", type=int)
-    zonas = Zona.query.order_by(Zona.nombre).all()
+    zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
 
     mantenimientos_hoy = []
     if zona_id:
-        equipos = EquipoInstalado.query.filter_by(zona_id=zona_id, activo=True).all()
+        equipos = db.session.execute(
+            select(EquipoInstalado).where(
+                EquipoInstalado.zona_id == zona_id, EquipoInstalado.activo == True
+            )
+        ).scalars().all()
         for equipo in equipos:
             vencimientos = calcular_vencimientos(equipo)
             n_vencidos = sum(1 for v in vencimientos if v["urgencia"] == URGENCIA_VENCIDO)
@@ -33,7 +39,6 @@ def dashboard():
             })
         mantenimientos_hoy.sort(key=lambda x: x["_sort"])
 
-    # Resumen global para el estado sin zona seleccionada (#23)
     criticos_global = get_equipos_criticos()
     resumen_global = {
         "vencidos": sum(1 for i in criticos_global if i["urgencia_maxima"] == URGENCIA_VENCIDO),
@@ -56,7 +61,7 @@ def dashboard():
 def criticos():
     zona_id = request.args.get("zona_id", type=int)
     urgencia = request.args.get("urgencia")
-    zonas = Zona.query.order_by(Zona.nombre).all()
+    zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
     equipos_criticos = get_equipos_criticos(zona_id=zona_id, urgencia=urgencia)
 
     return render_template(
@@ -82,7 +87,10 @@ def pdf_zona(zona_id):
     if not datos["zona"]:
         abort(404)
     html = render_template("reports/pdf_zona.html", **datos)
-    pdf = HTML(string=html).write_pdf()
+    try:
+        pdf = HTML(string=html).write_pdf()
+    except Exception:
+        abort(503)
     slug = datos["zona"].nombre.lower().replace(" ", "-")
     fecha_nombre = datos["fecha_ref"].strftime("%Y-%m-%d")
     return Response(
@@ -100,7 +108,10 @@ def pdf_cliente(cliente_id):
     if not datos["cliente"]:
         abort(404)
     html = render_template("reports/pdf_cliente.html", **datos)
-    pdf = HTML(string=html).write_pdf()
+    try:
+        pdf = HTML(string=html).write_pdf()
+    except Exception:
+        abort(503)
     slug = datos["cliente"].nombre.lower().replace(" ", "-")
     return Response(
         pdf,

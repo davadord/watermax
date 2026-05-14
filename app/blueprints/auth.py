@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required
 from datetime import datetime, timedelta
+from sqlalchemy import select
 
 from app import db
 from app.models.user import Usuario
@@ -14,7 +15,9 @@ def login():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
 
-        user = Usuario.query.filter_by(email=email, activo=True).first()
+        user = db.session.execute(
+            select(Usuario).where(Usuario.email == email, Usuario.activo == True)
+        ).scalars().first()
 
         if user is None:
             flash("Credenciales incorrectas.", "danger")

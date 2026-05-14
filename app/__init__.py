@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -19,6 +19,14 @@ login_manager.login_message_category = "warning"
 def create_app(config_name="default"):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+
+    if config_name == "production":
+        missing = [v for v in ("SECRET_KEY", "SQLALCHEMY_DATABASE_URI") if not app.config.get(v)]
+        if missing:
+            raise RuntimeError(
+                f"Variables de entorno no configuradas: {', '.join(missing)}. "
+                "Defínelas antes de iniciar la aplicación."
+            )
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -57,5 +65,14 @@ def create_app(config_name="default"):
                 1 for item in criticos if item["urgencia_maxima"] == URGENCIA_VENCIDO
             )
         return {"is_admin": is_admin, "alertas_count": alertas_count}
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template("errors/404.html"), 404
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        db.session.rollback()
+        return render_template("errors/500.html"), 500
 
     return app

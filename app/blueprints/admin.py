@@ -1,7 +1,8 @@
 from datetime import date, datetime
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
+from sqlalchemy import select, delete
 
 from app import db
 from app.models.client import Cliente, Zona, TIPOS_IDENTIFICADOR
@@ -20,11 +21,13 @@ _admin_roles = ("propietario", "administrativo")
 @role_required(*_admin_roles)
 def clientes():
     zona_id = request.args.get("zona_id", type=int)
-    zonas = Zona.query.order_by(Zona.nombre).all()
-    q = Cliente.query.filter_by(activo=True)
+    zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
+    stmt = select(Cliente).where(Cliente.activo == True)
     if zona_id:
-        q = q.join(Cliente.equipos).filter(EquipoInstalado.zona_id == zona_id, EquipoInstalado.activo == True)
-    clientes = q.order_by(Cliente.nombre).all()
+        stmt = stmt.join(Cliente.equipos).where(
+            EquipoInstalado.zona_id == zona_id, EquipoInstalado.activo == True
+        )
+    clientes = db.session.execute(stmt.order_by(Cliente.nombre)).scalars().all()
     return render_template("admin/clientes.html", clientes=clientes, zonas=zonas, zona_id=zona_id)
 
 
@@ -112,7 +115,6 @@ def sugerir_codigo_otro():
     digitos = "".join(c for c in telefono if c.isdigit())
     sufijo = digitos[-4:] if len(digitos) >= 4 else digitos.zfill(4)
     hoy = datetime.now().strftime("%Y%m%d")
-    from flask import jsonify
     return jsonify({"codigo": f"OTR-{sufijo}-{hoy}"})
 
 
@@ -123,10 +125,10 @@ def _validar_identificador(tipo, valor, exclude_id):
         return "La cédula debe tener exactamente 10 dígitos numéricos."
     if tipo == "RUC" and (not valor.isdigit() or len(valor) != 13):
         return "El RUC debe tener exactamente 13 dígitos numéricos."
-    q = Cliente.query.filter_by(identificador=valor)
+    stmt = select(Cliente).where(Cliente.identificador == valor)
     if exclude_id:
-        q = q.filter(Cliente.id != exclude_id)
-    if q.first():
+        stmt = stmt.where(Cliente.id != exclude_id)
+    if db.session.execute(stmt).scalars().first():
         return f"Ya existe un cliente con el identificador {valor}."
     return None
 
@@ -137,7 +139,7 @@ def _validar_identificador(tipo, valor, exclude_id):
 @login_required
 @role_required(*_admin_roles)
 def zonas():
-    zonas = Zona.query.order_by(Zona.nombre).all()
+    zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
     return render_template("admin/zonas.html", zonas=zonas)
 
 
@@ -203,7 +205,7 @@ def eliminar_zona(id):
 @login_required
 @role_required(*_admin_roles)
 def tipos_equipo():
-    tipos = TipoEquipo.query.order_by(TipoEquipo.nombre).all()
+    tipos = db.session.execute(select(TipoEquipo).order_by(TipoEquipo.nombre)).scalars().all()
     return render_template("admin/tipos_equipo.html", tipos=tipos)
 
 
@@ -211,7 +213,7 @@ def tipos_equipo():
 @login_required
 @role_required(*_admin_roles)
 def nuevo_tipo_equipo():
-    componentes = Componente.query.order_by(Componente.nombre).all()
+    componentes = db.session.execute(select(Componente).order_by(Componente.nombre)).scalars().all()
     if request.method == "POST":
         nombre = request.form.get("nombre", "").strip()
         if not nombre:
@@ -239,7 +241,7 @@ def editar_tipo_equipo(id):
     if not tipo:
         flash("Tipo de equipo no encontrado.", "danger")
         return redirect(url_for("admin.tipos_equipo"))
-    componentes = Componente.query.order_by(Componente.nombre).all()
+    componentes = db.session.execute(select(Componente).order_by(Componente.nombre)).scalars().all()
     if request.method == "POST":
         nombre = request.form.get("nombre", "").strip()
         if not nombre:
@@ -248,7 +250,9 @@ def editar_tipo_equipo(id):
         tipo.nombre = nombre
         tipo.marca = request.form.get("marca") or None
         tipo.descripcion = request.form.get("descripcion") or None
-        TipoEquipoComponente.query.filter_by(tipo_equipo_id=tipo.id).delete()
+        db.session.execute(
+            delete(TipoEquipoComponente).where(TipoEquipoComponente.tipo_equipo_id == tipo.id)
+        )
         _guardar_componentes(tipo, request.form, componentes)
         db.session.commit()
         flash(f"Tipo de equipo {tipo.nombre} actualizado.", "success")
@@ -289,7 +293,7 @@ def _guardar_componentes(tipo, form, componentes):
 @login_required
 @role_required(*_admin_roles)
 def componentes():
-    comps = Componente.query.order_by(Componente.nombre).all()
+    comps = db.session.execute(select(Componente).order_by(Componente.nombre)).scalars().all()
     return render_template("admin/componentes.html", componentes=comps)
 
 
@@ -359,37 +363,47 @@ def equipos():
     zona_id = request.args.get("zona_id", type=int)
     cliente_id = request.args.get("cliente_id", type=int)
 
-    query = EquipoInstalado.query.filter_by(activo=True)
+    stmt = select(EquipoInstalado).where(EquipoInstalado.activo == True)
     if zona_id:
-        query = query.filter_by(zona_id=zona_id)
+        stmt = stmt.where(EquipoInstalado.zona_id == zona_id)
     if cliente_id:
-        query = query.filter_by(cliente_id=cliente_id)
-    equipos = query.all()
+        stmt = stmt.where(EquipoInstalado.cliente_id == cliente_id)
+    equipos = db.session.execute(stmt).scalars().all()
 
-    query_inactivos = EquipoInstalado.query.filter_by(activo=False)
+    stmt_i = select(EquipoInstalado).where(EquipoInstalado.activo == False)
     if zona_id:
-        query_inactivos = query_inactivos.filter_by(zona_id=zona_id)
+        stmt_i = stmt_i.where(EquipoInstalado.zona_id == zona_id)
     if cliente_id:
-        query_inactivos = query_inactivos.filter_by(cliente_id=cliente_id)
-    equipos_inactivos = query_inactivos.all()
+        stmt_i = stmt_i.where(EquipoInstalado.cliente_id == cliente_id)
+    equipos_inactivos = db.session.execute(stmt_i).scalars().all()
 
     if zona_id:
-        cliente_ids = db.session.query(EquipoInstalado.cliente_id).filter_by(
-            zona_id=zona_id, activo=True
-        ).distinct()
-        clientes = (Cliente.query
-                    .filter(Cliente.id.in_(cliente_ids), Cliente.activo == True)
-                    .order_by(Cliente.nombre).all())
+        sub_clientes = (
+            select(EquipoInstalado.cliente_id)
+            .where(EquipoInstalado.zona_id == zona_id, EquipoInstalado.activo == True)
+            .distinct()
+        )
+        clientes = db.session.execute(
+            select(Cliente)
+            .where(Cliente.id.in_(sub_clientes), Cliente.activo == True)
+            .order_by(Cliente.nombre)
+        ).scalars().all()
     else:
-        clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
+        clientes = db.session.execute(
+            select(Cliente).where(Cliente.activo == True).order_by(Cliente.nombre)
+        ).scalars().all()
 
     if cliente_id:
-        zona_ids = db.session.query(EquipoInstalado.zona_id).filter_by(
-            cliente_id=cliente_id, activo=True
-        ).distinct()
-        zonas = Zona.query.filter(Zona.id.in_(zona_ids)).order_by(Zona.nombre).all()
+        sub_zonas = (
+            select(EquipoInstalado.zona_id)
+            .where(EquipoInstalado.cliente_id == cliente_id, EquipoInstalado.activo == True)
+            .distinct()
+        )
+        zonas = db.session.execute(
+            select(Zona).where(Zona.id.in_(sub_zonas)).order_by(Zona.nombre)
+        ).scalars().all()
     else:
-        zonas = Zona.query.order_by(Zona.nombre).all()
+        zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
 
     return render_template("admin/equipos.html",
                            equipos=equipos,
@@ -404,9 +418,11 @@ def equipos():
 @login_required
 @role_required(*_admin_roles)
 def nuevo_equipo():
-    clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
-    tipos_equipo = TipoEquipo.query.order_by(TipoEquipo.nombre).all()
-    zonas = Zona.query.order_by(Zona.nombre).all()
+    clientes = db.session.execute(
+        select(Cliente).where(Cliente.activo == True).order_by(Cliente.nombre)
+    ).scalars().all()
+    tipos_equipo = db.session.execute(select(TipoEquipo).order_by(TipoEquipo.nombre)).scalars().all()
+    zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
 
     cliente_id_param = request.args.get("cliente_id", type=int)
     cliente_preseleccionado = None
@@ -459,9 +475,11 @@ def editar_equipo(id):
     if not equipo or not equipo.activo:
         flash("Equipo no encontrado.", "danger")
         return redirect(url_for("admin.equipos"))
-    clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
-    tipos_equipo = TipoEquipo.query.order_by(TipoEquipo.nombre).all()
-    zonas = Zona.query.order_by(Zona.nombre).all()
+    clientes = db.session.execute(
+        select(Cliente).where(Cliente.activo == True).order_by(Cliente.nombre)
+    ).scalars().all()
+    tipos_equipo = db.session.execute(select(TipoEquipo).order_by(TipoEquipo.nombre)).scalars().all()
+    zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
         tipo_equipo_id = request.form.get("tipo_equipo_id")

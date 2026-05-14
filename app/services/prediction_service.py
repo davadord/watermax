@@ -1,8 +1,3 @@
-"""
-Motor de predicción de vencimientos.
-Combina el intervalo nominal del fabricante con el promedio
-de ciclos reales del historial de intervenciones.
-"""
 from datetime import date, timedelta
 from statistics import mean
 from sqlalchemy import select
@@ -16,7 +11,7 @@ URGENCIA_VENCIDO = "vencido"
 URGENCIA_PROXIMO = "proximo"
 URGENCIA_EN_PLAZO = "en_plazo"
 
-UMBRAL_ALERTA_DIAS = 15  # componentes con <= este valor se marcan como próximos
+UMBRAL_ALERTA_DIAS = 15
 
 
 def _intervalo_efectivo(equipo, componente):
@@ -96,7 +91,6 @@ def calcular_vencimientos(equipo, fecha_ref=None):
             "fuente": fuente,
         })
 
-    # Ordenar: vencidos primero, luego próximos, luego en plazo
     orden = {URGENCIA_VENCIDO: 0, URGENCIA_PROXIMO: 1, URGENCIA_EN_PLAZO: 2}
     resultados.sort(key=lambda x: (orden[x["urgencia"]], x["dias_restantes"]))
     return resultados
@@ -113,7 +107,7 @@ def calcular_proximo_componente(equipo, componente, fecha_intervencion):
     intervalo_dias, _fuente, _ultima = _intervalo_efectivo(equipo, componente)
     return fecha_intervencion + timedelta(days=intervalo_dias)
 
-1
+
 def get_equipos_criticos(zona_id=None, urgencia=None):
     """
     Retorna lista de dicts para todos los equipos activos que tienen al menos
@@ -131,9 +125,9 @@ def get_equipos_criticos(zona_id=None, urgencia=None):
     """
     orden_urgencia = {URGENCIA_VENCIDO: 0, URGENCIA_PROXIMO: 1, URGENCIA_EN_PLAZO: 2}
 
-    query = (
-        EquipoInstalado.query
-        .filter_by(activo=True)
+    stmt = (
+        select(EquipoInstalado)
+        .where(EquipoInstalado.activo == True)
         .options(
             joinedload(EquipoInstalado.tipo_equipo)
                 .joinedload(TipoEquipo.componentes)
@@ -143,9 +137,9 @@ def get_equipos_criticos(zona_id=None, urgencia=None):
         )
     )
     if zona_id:
-        query = query.filter_by(zona_id=zona_id)
+        stmt = stmt.where(EquipoInstalado.zona_id == zona_id)
 
-    equipos = query.all()
+    equipos = db.session.execute(stmt).unique().scalars().all()
 
     resultado = []
     for equipo in equipos:
@@ -157,7 +151,6 @@ def get_equipos_criticos(zona_id=None, urgencia=None):
         if not criticos:
             continue
 
-        # Filtro opcional por urgencia exacta
         if urgencia and urgencia in (URGENCIA_VENCIDO, URGENCIA_PROXIMO):
             if not any(v["urgencia"] == urgencia for v in criticos):
                 continue

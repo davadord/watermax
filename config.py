@@ -20,6 +20,7 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    SECRET_KEY = os.environ.get("SECRET_KEY")  # sin fallback — None si no está definida
 
 
 config = {
