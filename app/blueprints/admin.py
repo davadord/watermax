@@ -407,6 +407,14 @@ def nuevo_equipo():
     clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
     tipos_equipo = TipoEquipo.query.order_by(TipoEquipo.nombre).all()
     zonas = Zona.query.order_by(Zona.nombre).all()
+
+    cliente_id_param = request.args.get("cliente_id", type=int)
+    cliente_preseleccionado = None
+    if cliente_id_param:
+        c = db.session.get(Cliente, cliente_id_param)
+        if c and c.activo:
+            cliente_preseleccionado = c
+
     if request.method == "POST":
         cliente_id = request.form.get("cliente_id")
         tipo_equipo_id = request.form.get("tipo_equipo_id")
@@ -416,13 +424,15 @@ def nuevo_equipo():
             flash("Cliente, zona, tipo de equipo y fecha son obligatorios.", "danger")
             return render_template("admin/equipo_form.html",
                                    clientes=clientes, tipos_equipo=tipos_equipo,
-                                   zonas=zonas, equipo=None, today=date.today())
+                                   zonas=zonas, equipo=None, today=date.today(),
+                                   cliente_preseleccionado=cliente_preseleccionado)
         fecha_instalacion = date.fromisoformat(fecha_str)
         if fecha_instalacion > date.today():
             flash("La fecha de instalación no puede ser futura.", "danger")
             return render_template("admin/equipo_form.html",
                                    clientes=clientes, tipos_equipo=tipos_equipo,
-                                   zonas=zonas, equipo=None, today=date.today())
+                                   zonas=zonas, equipo=None, today=date.today(),
+                                   cliente_preseleccionado=cliente_preseleccionado)
         equipo = EquipoInstalado(
             cliente_id=int(cliente_id),
             tipo_equipo_id=int(tipo_equipo_id),
@@ -437,7 +447,8 @@ def nuevo_equipo():
         return redirect(url_for("admin.equipos"))
     return render_template("admin/equipo_form.html",
                            clientes=clientes, tipos_equipo=tipos_equipo,
-                           zonas=zonas, equipo=None, today=date.today())
+                           zonas=zonas, equipo=None, today=date.today(),
+                           cliente_preseleccionado=cliente_preseleccionado)
 
 
 @admin_bp.route("/equipos/<int:id>/editar", methods=["GET", "POST"])
@@ -460,13 +471,15 @@ def editar_equipo(id):
             flash("Cliente, zona, tipo de equipo y fecha son obligatorios.", "danger")
             return render_template("admin/equipo_form.html",
                                    clientes=clientes, tipos_equipo=tipos_equipo,
-                                   zonas=zonas, equipo=equipo, today=date.today())
+                                   zonas=zonas, equipo=equipo, today=date.today(),
+                                   cliente_preseleccionado=None)
         fecha_instalacion = date.fromisoformat(fecha_str)
         if fecha_instalacion > date.today():
             flash("La fecha de instalación no puede ser futura.", "danger")
             return render_template("admin/equipo_form.html",
                                    clientes=clientes, tipos_equipo=tipos_equipo,
-                                   zonas=zonas, equipo=equipo, today=date.today())
+                                   zonas=zonas, equipo=equipo, today=date.today(),
+                                   cliente_preseleccionado=None)
         equipo.cliente_id = int(cliente_id)
         equipo.tipo_equipo_id = int(tipo_equipo_id)
         equipo.zona_id = int(zona_id)
@@ -478,7 +491,8 @@ def editar_equipo(id):
         return redirect(url_for("admin.equipos"))
     return render_template("admin/equipo_form.html",
                            clientes=clientes, tipos_equipo=tipos_equipo,
-                           zonas=zonas, equipo=equipo, today=date.today())
+                           zonas=zonas, equipo=equipo, today=date.today(),
+                           cliente_preseleccionado=None)
 
 
 @admin_bp.route("/equipos/<int:id>/eliminar", methods=["POST"])

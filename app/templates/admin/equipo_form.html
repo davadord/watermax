@@ -20,15 +20,23 @@
       <h2 class="h6 text-uppercase text-muted mb-3">Cliente y ubicación</h2>
       <div class="wm-form-grid">
         <div class="col-span-2">
-          <label class="form-label required" for="cliente_id">Cliente</label>
-          <select name="cliente_id" id="cliente_id" class="form-select" required aria-required="true">
-            <option value="">Selecciona un cliente…</option>
-            {% for cliente in clientes %}
-              <option value="{{ cliente.id }}" {{ field_selected('cliente_id', cliente.id, equipo.cliente_id if equipo else None) }}>
-                {{ cliente.nombre }}{% if cliente.identificador %} — {{ cliente.identificador }}{% endif %}
-              </option>
-            {% endfor %}
-          </select>
+          <label class="form-label required" {% if not cliente_preseleccionado %}for="cliente_id"{% endif %}>Cliente</label>
+          {% if cliente_preseleccionado %}
+            <p class="form-control-plaintext fw-semibold mb-0">
+              {{ cliente_preseleccionado.nombre }}
+              <span class="text-muted fw-normal small">— {{ cliente_preseleccionado.tipo_identificador }} {{ cliente_preseleccionado.identificador }}</span>
+            </p>
+            <input type="hidden" name="cliente_id" value="{{ cliente_preseleccionado.id }}">
+          {% else %}
+            <select name="cliente_id" id="cliente_id" class="form-select" required aria-required="true">
+              <option value="">Selecciona un cliente…</option>
+              {% for cliente in clientes %}
+                <option value="{{ cliente.id }}" {{ field_selected('cliente_id', cliente.id, equipo.cliente_id if equipo else None) }}>
+                  {{ cliente.nombre }}{% if cliente.identificador %} — {{ cliente.identificador }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          {% endif %}
         </div>
 
         <div>

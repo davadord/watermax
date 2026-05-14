@@ -79,6 +79,8 @@
           <td class="actions">
             {{ icon_link(url_for('maintenance.historial_cliente', cliente_id=cliente.id),
                         "clock-history", "Ver historial", "outline-primary") }}
+            {{ icon_link(url_for('admin.nuevo_equipo', cliente_id=cliente.id),
+                        "plus-circle", "Agregar equipo", "outline-success") }}
             {{ icon_link(url_for('admin.editar_cliente', id=cliente.id),
                         "pencil", "Editar") }}
             {{ delete_button(

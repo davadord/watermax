@@ -25,7 +25,7 @@
        message="Registra un equipo primero para poder agendar mantenimientos.",
        icon="tools",
        action_label="Registrar equipo",
-       action_url=url_for('admin.nuevo_equipo')) }}
+       action_url=url_for('admin.nuevo_equipo', cliente_id=cliente.id)) }}
   </div>
 {% else %}
 {% for equipo in equipos %}
