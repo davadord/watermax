@@ -5,7 +5,9 @@ de ciclos reales del historial de intervenciones.
 """
 from datetime import date, timedelta
 from statistics import mean
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
+from app import db
 from app.models.maintenance import DetalleMantenimiento, Mantenimiento
 from app.models.equipment import EquipoInstalado, TipoEquipo, TipoEquipoComponente
 
@@ -15,6 +17,42 @@ URGENCIA_PROXIMO = "proximo"
 URGENCIA_EN_PLAZO = "en_plazo"
 
 UMBRAL_ALERTA_DIAS = 15  # componentes con <= este valor se marcan como próximos
+
+
+def _intervalo_efectivo(equipo, componente):
+    """
+    Retorna (intervalo_dias, fuente, ultima_fecha_reemplazo).
+    fuente='historico' si ≥ 2 ciclos con desviación ≤ 50% del nominal; 'nominal' si no.
+    ultima_fecha_reemplazo es el date del último reemplazo filtrado, o None si no hay.
+    """
+    intervalo_nominal = componente.intervalo_nominal * 30
+
+    stmt = (
+        select(DetalleMantenimiento)
+        .join(Mantenimiento)
+        .where(
+            Mantenimiento.equipo_id == equipo.id,
+            Mantenimiento.completado == True,
+            DetalleMantenimiento.componente_id == componente.id,
+            DetalleMantenimiento.accion == "reemplazo",
+        )
+        .order_by(Mantenimiento.fecha)
+    )
+    historial = db.session.execute(stmt).scalars().all()
+    fechas = [d.mantenimiento.fecha for d in historial]
+
+    if equipo.fecha_reactivacion:
+        fechas = [f for f in fechas if f >= equipo.fecha_reactivacion]
+
+    ultima = fechas[-1] if fechas else None
+
+    if len(fechas) >= 2 and intervalo_nominal > 0:
+        ciclos_dias = [(fechas[i + 1] - fechas[i]).days for i in range(len(fechas) - 1)]
+        intervalo_real = int(mean(ciclos_dias))
+        if abs(intervalo_real - intervalo_nominal) / intervalo_nominal <= 0.5:
+            return intervalo_real, "historico", ultima
+
+    return intervalo_nominal, "nominal", ultima
 
 
 def calcular_vencimientos(equipo):
@@ -30,44 +68,14 @@ def calcular_vencimientos(equipo):
 
     for tec in equipo.tipo_equipo.componentes:
         comp = tec.componente
-        intervalo_nominal = comp.intervalo_nominal  # días
 
-        # Solo reemplazo resetea el reloj — limpieza y revision no cuentan
-        historial = (
-            DetalleMantenimiento.query
-            .join(Mantenimiento)
-            .filter(
-                Mantenimiento.equipo_id == equipo.id,
-                Mantenimiento.completado == True,
-                DetalleMantenimiento.componente_id == comp.id,
-                DetalleMantenimiento.accion == "reemplazo",
-            )
-            .order_by(Mantenimiento.fecha)
-            .all()
-        )
+        intervalo_dias, fuente, ultima_reemplazo = _intervalo_efectivo(equipo, comp)
 
-        fechas = [d.mantenimiento.fecha for d in historial]
-
-        # Si el equipo fue reactivado, descartar historial anterior a la reactivación
         fecha_base = equipo.fecha_instalacion
         if equipo.fecha_reactivacion:
             fecha_base = max(equipo.fecha_instalacion, equipo.fecha_reactivacion)
-            fechas = [f for f in fechas if f >= equipo.fecha_reactivacion]
 
-        fuente = "nominal"
-        intervalo_dias = intervalo_nominal * 30
-
-        if len(fechas) >= 2:
-            ciclos_dias = [
-                (fechas[i+1] - fechas[i]).days
-                for i in range(len(fechas) - 1)
-            ]
-            intervalo_real = int(mean(ciclos_dias))
-            if abs(intervalo_real - intervalo_dias) / intervalo_dias <= 0.5:
-                intervalo_dias = intervalo_real
-                fuente = "historico"
-
-        ultima_fecha = fechas[-1] if fechas else fecha_base
+        ultima_fecha = ultima_reemplazo if ultima_reemplazo is not None else fecha_base
         fecha_proyectada = ultima_fecha + timedelta(days=intervalo_dias)
         dias_restantes = (fecha_proyectada - hoy).days
 
@@ -101,36 +109,7 @@ def calcular_proximo_componente(equipo, componente, fecha_intervencion):
 
     Retorna un objeto date.
     """
-    intervalo_nominal_dias = componente.intervalo_nominal * 30
-
-    historial = (
-        DetalleMantenimiento.query
-        .join(Mantenimiento)
-        .filter(
-            Mantenimiento.equipo_id == equipo.id,
-            Mantenimiento.completado == True,
-            DetalleMantenimiento.componente_id == componente.id,
-            DetalleMantenimiento.accion == "reemplazo",
-        )
-        .order_by(Mantenimiento.fecha)
-        .all()
-    )
-
-    fechas = [d.mantenimiento.fecha for d in historial]
-
-    if equipo.fecha_reactivacion:
-        fechas = [f for f in fechas if f >= equipo.fecha_reactivacion]
-
-    intervalo_dias = intervalo_nominal_dias
-    if len(fechas) >= 2:
-        ciclos_dias = [
-            (fechas[i + 1] - fechas[i]).days
-            for i in range(len(fechas) - 1)
-        ]
-        intervalo_real = int(mean(ciclos_dias))
-        if abs(intervalo_real - intervalo_nominal_dias) / intervalo_nominal_dias <= 0.5:
-            intervalo_dias = intervalo_real
-
+    intervalo_dias, _fuente, _ultima = _intervalo_efectivo(equipo, componente)
     return fecha_intervencion + timedelta(days=intervalo_dias)
 
 
