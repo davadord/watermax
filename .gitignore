@@ -16,8 +16,6 @@ __pycache__/
 dist/
 build/
 
-# Scripts de inicialización con credenciales hardcodeadas
-setup_db.py
 
 # Scripts de configuración de GitHub (tokens, exports)
 scripts/
