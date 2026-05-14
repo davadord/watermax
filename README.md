@@ -39,8 +39,21 @@ Abre `http://127.0.0.1:5000`
 
 ```
 app/
-├── controllers/   # Blueprints: auth, admin, maintenance, reports
-├── models/        # Modelos SQLAlchemy
-├── services/      # Motor de predicción de vencimientos
+├── blueprints/    # auth, admin, maintenance, reports
+├── models/        # SQLAlchemy: client, equipment, maintenance, user
+├── services/      # Motor predictivo de vencimientos (prediction_service.py)
 └── templates/     # Jinja2 + Bootstrap 5.3
 ```
+
+---
+
+## Estado de desarrollo
+
+| Sprint | Período | Issues | Estado |
+|--------|---------|--------|--------|
+| S0 | abr 2026 | Entorno, modelos, auth, dashboard | Completado |
+| S1 | abr–may 2026 | CRUD clientes, zonas, equipos | Completado |
+| S2 | may 2026 | Registro de mantenimientos, motor predictivo base | Completado |
+| S3 | may 2026 | Alertas críticas, dashboard global, motor predictivo refinado | **Completado** |
+| S4 | jun 2026 | report_service.py, reportes PDF WeasyPrint | Pendiente |
+| S5 | jun–jul 2026 | Pruebas JMeter + SUS, despliegue PythonAnywhere | Pendiente |
