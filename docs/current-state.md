@@ -118,6 +118,7 @@ el despliegue se bloqueará sin un mensaje de error claro.
 ## Limitaciones conocidas
 
 - Sin suite de tests automatizados. Criterios de aceptación validados manualmente.
+- `Mantenimiento.completado` siempre es `True` al crear — nunca se filtra en ninguna query. El campo existe pero no captura ningún estado real del negocio (no hay mantenimientos "en curso"). Dead weight hasta que se implemente ese flujo.
 - Motor predictivo se recalcula en cada request (sin caché). Aceptable para el volumen esperado.
 - `get_equipos_criticos()` se ejecuta en cada request autenticado de rutas `reports.*`
   (para el badge de alertas en navbar). Sin optimización de caché entre requests.

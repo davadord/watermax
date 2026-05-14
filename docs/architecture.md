@@ -163,6 +163,15 @@ Retorna: `[{equipo, urgencia_maxima, dias_min, componentes_criticos: [...]}, ...
 
 Solo incluye equipos con al menos un componente en estado `vencido` o `proximo`.
 
+### Convenciones de carga de relaciones
+
+| Estrategia | Cuándo usarla | Nota |
+|---|---|---|
+| `selectinload` | Padre fijo, cargar sus hijos en SELECTs adicionales eficientes | Historial de un equipo, detalles de un mantenimiento |
+| `joinedload` | Todos los hijos de un padre en un solo JOIN | Equipos de un cliente con sus relaciones. Requiere `.unique()` antes de `.scalars()` |
+
+**Paginación:** usar `db.paginate(stmt, page=p, per_page=20, error_out=False)`. La API `Model.query.paginate()` es legacy (SQLAlchemy 1.x). `error_out=False` evita 404 en páginas fuera de rango.
+
 ### `app/services/report_service.py` — Datos para PDFs
 
 **`get_reporte_zona(zona_id, fecha=None)` → `dict`**
@@ -288,6 +297,8 @@ flask db stamp head       # marcar migraciones como aplicadas sin ejecutarlas
 flask db migrate -m "descripcion"
 flask db upgrade
 ```
+
+**DDL en MySQL es auto-commit.** Cada `ALTER TABLE`, `ADD COLUMN`, `DROP COLUMN` hace COMMIT implícito — no hay rollback si la migración falla a mitad. Si una migración mueve un campo entre tablas en un solo paso y el segundo falla, la BD queda inconsistente. Patrón seguro: (1) ADD COLUMN nullable, (2) UPDATE datos, (3) ALTER NOT NULL, (4) DROP COLUMN original. En dev, si hay inconsistencia: recrear con `python setup_db.py`.
 
 ---
 
