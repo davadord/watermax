@@ -55,5 +55,5 @@ app/
 | S1 | abr–may 2026 | CRUD clientes, zonas, equipos | Completado |
 | S2 | may 2026 | Registro de mantenimientos, motor predictivo base | Completado |
 | S3 | may 2026 | Alertas críticas, dashboard global, motor predictivo refinado | **Completado** |
-| S4 | jun 2026 | report_service.py, reportes PDF WeasyPrint | Pendiente |
+| S4 | may 2026 | report_service.py, reportes PDF WeasyPrint | **Completado** |
 | S5 | jun–jul 2026 | Pruebas JMeter + SUS, despliegue PythonAnywhere | Pendiente |

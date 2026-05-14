@@ -38,6 +38,7 @@ teoria/
 
 # Claude Code
 CLAUDE.md
+AGENTS.md
 
 # PDFs generados
 app/static/reports/
