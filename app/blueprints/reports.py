@@ -1,12 +1,14 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, Response, abort
 from flask_login import login_required
 
+from datetime import date
 from app.models.client import Zona
 from app.models.equipment import EquipoInstalado
 from app.services.prediction_service import (
     calcular_vencimientos, get_equipos_criticos,
     URGENCIA_VENCIDO, URGENCIA_PROXIMO,
 )
+from app.services.report_service import get_reporte_zona, get_reporte_cliente
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -45,6 +47,7 @@ def dashboard():
         zona_id=zona_id,
         mantenimientos_hoy=mantenimientos_hoy,
         resumen_global=resumen_global,
+        today=date.today().isoformat(),
     )
 
 
@@ -62,4 +65,45 @@ def criticos():
         zonas=zonas,
         zona_id=zona_id,
         urgencia=urgencia,
+    )
+
+
+@reports_bp.route("/zona/<int:zona_id>/pdf")
+@login_required
+def pdf_zona(zona_id):
+    from weasyprint import HTML
+    from datetime import date as date_type
+    fecha_str = request.args.get("fecha")
+    try:
+        fecha = date_type.fromisoformat(fecha_str) if fecha_str else None
+    except ValueError:
+        fecha = None
+    datos = get_reporte_zona(zona_id, fecha=fecha)
+    if not datos["zona"]:
+        abort(404)
+    html = render_template("reports/pdf_zona.html", **datos)
+    pdf = HTML(string=html).write_pdf()
+    slug = datos["zona"].nombre.lower().replace(" ", "-")
+    fecha_nombre = datos["fecha_ref"].strftime("%Y-%m-%d")
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=reporte-zona-{slug}-{fecha_nombre}.pdf"},
+    )
+
+
+@reports_bp.route("/cliente/<int:cliente_id>/pdf")
+@login_required
+def pdf_cliente(cliente_id):
+    from weasyprint import HTML
+    datos = get_reporte_cliente(cliente_id)
+    if not datos["cliente"]:
+        abort(404)
+    html = render_template("reports/pdf_cliente.html", **datos)
+    pdf = HTML(string=html).write_pdf()
+    slug = datos["cliente"].nombre.lower().replace(" ", "-")
+    return Response(
+        pdf,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=reporte-cliente-{slug}.pdf"},
     )

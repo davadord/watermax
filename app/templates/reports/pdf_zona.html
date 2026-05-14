@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte Zona {{ zona.nombre }} — {{ fecha_generacion.strftime('%d/%m/%Y') }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 1.8cm 2cm;
+    @bottom-center {
+      content: "Página " counter(page) " de " counter(pages);
+      font-size: 8pt;
+      color: #6c757d;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "DejaVu Sans", Arial, sans-serif;
+    font-size: 9pt;
+    color: #212529;
+    line-height: 1.4;
+  }
+
+  /* ── Encabezado ── */
+  .header {
+    border-bottom: 2px solid #0d6efd;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .header-brand { font-size: 16pt; font-weight: 700; color: #0d6efd; }
+  .header-sub   { font-size: 8pt; color: #6c757d; margin-top: 2px; }
+  .header-meta  { text-align: right; font-size: 8pt; color: #6c757d; }
+  .header-meta strong { display: block; font-size: 11pt; color: #212529; }
+
+  /* ── Resumen ── */
+  .summary {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .summary-box {
+    flex: 1;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .summary-box .num { font-size: 18pt; font-weight: 700; }
+  .summary-box .lbl { font-size: 7.5pt; color: #6c757d; text-transform: uppercase; }
+  .box-vencido  { border-color: #dc3545; }
+  .box-vencido  .num { color: #dc3545; }
+  .box-proximo  { border-color: #fd7e14; }
+  .box-proximo  .num { color: #fd7e14; }
+  .box-en-plazo { border-color: #198754; }
+  .box-en-plazo .num { color: #198754; }
+  .box-total    { border-color: #0d6efd; }
+  .box-total    .num { color: #0d6efd; }
+
+  /* ── Tabla principal ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 8.5pt;
+  }
+  thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 5px 6px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    color: #6c757d;
+  }
+  tbody td {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 5px 6px;
+    vertical-align: top;
+  }
+  .row-vencido  { background: #fff5f5; }
+  .row-proximo  { background: #fff8f0; }
+  .row-en-plazo { background: #fff; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 7pt;
+    font-weight: 600;
+  }
+  .badge-danger  { background: #dc3545; color: #fff; }
+  .badge-warning { background: #fd7e14; color: #fff; }
+  .badge-success { background: #198754; color: #fff; }
+  .badge-secondary { background: #6c757d; color: #fff; }
+
+  /* ── Sub-tabla de componentes ── */
+  .sub-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+    font-size: 8pt;
+  }
+  .sub-table td { padding: 2px 4px; border-bottom: 1px solid #f0f0f0; }
+  .sub-table tr:last-child td { border-bottom: none; }
+
+  /* ── Pie ── */
+  .footer {
+    margin-top: 20px;
+    border-top: 1px solid #dee2e6;
+    padding-top: 8px;
+    font-size: 7.5pt;
+    color: #6c757d;
+  }
+
+  .mono { font-family: "DejaVu Sans Mono", monospace; }
+  .text-muted { color: #6c757d; }
+  .nowrap { white-space: nowrap; }
+</style>
+</head>
+<body>
+
+{# ── Encabezado ── #}
+<div class="header">
+  <div>
+    <div class="header-brand">Watermax</div>
+    <div class="header-sub">Sistema de gestión de mantenimiento preventivo</div>
+  </div>
+  <div class="header-meta">
+    <strong>Reporte por zona — {{ zona.nombre }}</strong>
+    Proyección al: {{ fecha_ref.strftime('%d de %B de %Y') }}<br>
+    Generado: {{ fecha_generacion.strftime('%d/%m/%Y') }}
+  </div>
+</div>
+
+{# ── Resumen ── #}
+<div class="summary">
+  <div class="summary-box box-total">
+    <div class="num">{{ resumen.total }}</div>
+    <div class="lbl">Total equipos</div>
+  </div>
+  <div class="summary-box box-vencido">
+    <div class="num">{{ resumen.vencidos }}</div>
+    <div class="lbl">Con vencidos</div>
+  </div>
+  <div class="summary-box box-proximo">
+    <div class="num">{{ resumen.proximos }}</div>
+    <div class="lbl">Próximos a vencer</div>
+  </div>
+  <div class="summary-box box-en-plazo">
+    <div class="num">{{ resumen.en_plazo }}</div>
+    <div class="lbl">En plazo</div>
+  </div>
+</div>
+
+{# ── Tabla de equipos ── #}
+{% if not items %}
+  <p class="text-muted">No hay equipos activos registrados en esta zona.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Cliente</th>
+      <th>Equipo</th>
+      <th>Serie</th>
+      <th>Vencidos</th>
+      <th>Próximos</th>
+      <th>Estado</th>
+      <th>Componentes críticos</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+      {% if item.n_vencidos > 0 %}
+        {% set row_cls = "row-vencido" %}
+        {% set estado_badge = '<span class="badge badge-danger">Vencido</span>' %}
+      {% elif item.n_proximos > 0 %}
+        {% set row_cls = "row-proximo" %}
+        {% set estado_badge = '<span class="badge badge-warning">Próximo</span>' %}
+      {% else %}
+        {% set row_cls = "row-en-plazo" %}
+        {% set estado_badge = '<span class="badge badge-success">En plazo</span>' %}
+      {% endif %}
+    <tr class="{{ row_cls }}">
+      <td><strong>{{ item.equipo.cliente.nombre }}</strong><br>
+          <span class="text-muted">{{ item.equipo.cliente.direccion or '' }}</span></td>
+      <td><span class="badge badge-secondary">{{ item.equipo.tipo_equipo.nombre }}</span></td>
+      <td class="mono nowrap">{{ item.equipo.numero_serie or '—' }}</td>
+      <td class="nowrap">
+        {% if item.n_vencidos %}<span class="badge badge-danger">{{ item.n_vencidos }}</span>{% else %}—{% endif %}
+      </td>
+      <td class="nowrap">
+        {% if item.n_proximos %}<span class="badge badge-warning">{{ item.n_proximos }}</span>{% else %}—{% endif %}
+      </td>
+      <td>{{ estado_badge | safe }}</td>
+      <td>
+        {% set criticos = item.vencimientos | selectattr('urgencia', 'ne', 'en_plazo') | list %}
+        {% if criticos %}
+          <table class="sub-table">
+            {% for v in criticos %}
+            <tr>
+              <td class="nowrap">{{ v.componente.nombre }}</td>
+              <td class="nowrap">{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
+              <td class="nowrap">
+                {% if v.dias_restantes < 0 %}hace {{ -v.dias_restantes }} d
+                {% elif v.dias_restantes == 0 %}hoy
+                {% else %}en {{ v.dias_restantes }} d{% endif %}
+              </td>
+              <td class="text-muted nowrap">{{ v.fuente }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        {% else %}
+          <span class="text-muted">Todos en plazo</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{# ── Pie ── #}
+<div class="footer">
+  Watermax · Reporte generado automáticamente el {{ fecha_generacion.strftime('%d/%m/%Y') }} ·
+  Zona: {{ zona.nombre }}
+  {% if zona.descripcion %} — {{ zona.descripcion }}{% endif %}
+</div>
+
+</body>
+</html>

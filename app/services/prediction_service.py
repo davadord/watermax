@@ -55,16 +55,17 @@ def _intervalo_efectivo(equipo, componente):
     return intervalo_nominal, "nominal", ultima
 
 
-def calcular_vencimientos(equipo):
+def calcular_vencimientos(equipo, fecha_ref=None):
     """
     Retorna una lista de dicts con la proyección por componente:
     {
         componente, fecha_proyectada, urgencia, dias_restantes,
         intervalo_usado, fuente ('historico' | 'nominal')
     }
+    fecha_ref permite proyectar al futuro (planificación). Por defecto: hoy.
     """
     resultados = []
-    hoy = date.today()
+    hoy = fecha_ref or date.today()
 
     for tec in equipo.tipo_equipo.componentes:
         comp = tec.componente
@@ -112,7 +113,7 @@ def calcular_proximo_componente(equipo, componente, fecha_intervencion):
     intervalo_dias, _fuente, _ultima = _intervalo_efectivo(equipo, componente)
     return fecha_intervencion + timedelta(days=intervalo_dias)
 
-
+1
 def get_equipos_criticos(zona_id=None, urgencia=None):
     """
     Retorna lista de dicts para todos los equipos activos que tienen al menos

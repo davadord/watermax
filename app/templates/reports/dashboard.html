@@ -27,6 +27,17 @@
   {% endif %}
   <div class="wm-toolbar-spacer"></div>
 </form>
+{% if zona_id %}
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <input type="date" id="pdf-fecha" class="form-control form-control-sm"
+           value="{{ today }}" style="width: 9rem;">
+    <a id="pdf-link"
+       href="{{ url_for('reports.pdf_zona', zona_id=zona_id) }}?fecha={{ today }}"
+       target="_blank" class="btn btn-outline-secondary btn-sm text-nowrap">
+      <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+    </a>
+  </div>
+{% endif %}
 
 {% if not zona_id %}
   <div class="row g-3 mb-4">
@@ -166,5 +177,19 @@
       </div>
     </div>
   {% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if zona_id %}
+<script>
+  const fechaInput = document.getElementById('pdf-fecha');
+  const pdfLink   = document.getElementById('pdf-link');
+  const base      = "{{ url_for('reports.pdf_zona', zona_id=zona_id) }}";
+
+  fechaInput.addEventListener('change', () => {
+    pdfLink.href = base + '?fecha=' + fechaInput.value;
+  });
+</script>
 {% endif %}
 {% endblock %}

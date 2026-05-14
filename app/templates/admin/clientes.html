@@ -77,6 +77,8 @@
             {{ cliente.direccion or '—' }}
           </td>
           <td class="actions">
+            {{ icon_link(url_for('reports.pdf_cliente', cliente_id=cliente.id),
+                        "file-earmark-pdf", "Reporte PDF", "outline-secondary", "_blank") }}
             {{ icon_link(url_for('maintenance.historial_cliente', cliente_id=cliente.id),
                         "clock-history", "Ver historial", "outline-primary") }}
             {{ icon_link(url_for('admin.nuevo_equipo', cliente_id=cliente.id),

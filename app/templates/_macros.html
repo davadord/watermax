@@ -95,10 +95,11 @@
 {% endmacro %}
 
 {# Botón-link icono (editar, ver historial, etc.). #}
-{% macro icon_link(url, icon, tooltip, variant="outline-secondary") %}
+{% macro icon_link(url, icon, tooltip, variant="outline-secondary", target=None) %}
   <a href="{{ url }}" class="btn btn-{{ variant }} wm-icon-btn"
      data-bs-toggle="tooltip" title="{{ tooltip }}"
-     aria-label="{{ tooltip }}">
+     aria-label="{{ tooltip }}"
+     {% if target %}target="{{ target }}"{% endif %}>
     <i class="bi bi-{{ icon }}" aria-hidden="true"></i>
   </a>
 {% endmacro %}

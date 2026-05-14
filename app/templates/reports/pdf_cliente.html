@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte {{ cliente.nombre }} — {{ fecha_generacion.strftime('%d/%m/%Y') }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 1.8cm 2cm;
+    @bottom-center {
+      content: "Página " counter(page) " de " counter(pages);
+      font-size: 8pt;
+      color: #6c757d;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "DejaVu Sans", Arial, sans-serif;
+    font-size: 9pt;
+    color: #212529;
+    line-height: 1.4;
+  }
+
+  /* ── Encabezado ── */
+  .header {
+    border-bottom: 2px solid #0d6efd;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .header-brand { font-size: 16pt; font-weight: 700; color: #0d6efd; }
+  .header-sub   { font-size: 8pt; color: #6c757d; margin-top: 2px; }
+  .header-meta  { text-align: right; font-size: 8pt; color: #6c757d; }
+  .header-meta strong { display: block; font-size: 11pt; color: #212529; }
+
+  /* ── Ficha cliente ── */
+  .client-card {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 18px;
+    display: flex;
+    gap: 30px;
+  }
+  .client-card .field { margin-bottom: 4px; }
+  .client-card .label { font-size: 7.5pt; text-transform: uppercase; color: #6c757d; }
+  .client-card .value { font-size: 9.5pt; font-weight: 600; }
+
+  /* ── Sección por equipo ── */
+  .equipo-section {
+    margin-bottom: 22px;
+    page-break-inside: avoid;
+  }
+  .equipo-header {
+    background: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 9.5pt;
+  }
+  .equipo-header .meta { font-size: 7.5pt; color: #6c757d; font-weight: 400; margin-top: 2px; }
+
+  /* ── Tablas ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 8.5pt;
+  }
+  thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 5px 6px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    color: #6c757d;
+  }
+  tbody td {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 5px 6px;
+    vertical-align: top;
+  }
+  .row-vencido  { background: #fff5f5; }
+  .row-proximo  { background: #fff8f0; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 7pt;
+    font-weight: 600;
+  }
+  .badge-danger    { background: #dc3545; color: #fff; }
+  .badge-warning   { background: #fd7e14; color: #fff; }
+  .badge-success   { background: #198754; color: #fff; }
+  .badge-secondary { background: #6c757d; color: #fff; }
+  .badge-info      { background: #0dcaf0; color: #000; }
+  .badge-primary   { background: #0d6efd; color: #fff; }
+
+  /* ── Subtítulos de sección ── */
+  .section-title {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 4px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  /* ── Detalles mantenimiento ── */
+  .detail-list { margin: 3px 0 0 8px; font-size: 8pt; }
+  .detail-list li { margin-bottom: 2px; }
+
+  /* ── Sin datos ── */
+  .empty { color: #6c757d; font-style: italic; font-size: 8.5pt; }
+
+  /* ── Pie ── */
+  .footer {
+    margin-top: 20px;
+    border-top: 1px solid #dee2e6;
+    padding-top: 8px;
+    font-size: 7.5pt;
+    color: #6c757d;
+  }
+
+  .mono { font-family: "DejaVu Sans Mono", monospace; }
+  .text-muted { color: #6c757d; }
+  .nowrap { white-space: nowrap; }
+</style>
+</head>
+<body>
+
+{# ── Encabezado ── #}
+<div class="header">
+  <div>
+    <div class="header-brand">Watermax</div>
+    <div class="header-sub">Sistema de gestión de mantenimiento preventivo</div>
+  </div>
+  <div class="header-meta">
+    <strong>Reporte individual de cliente</strong>
+    Generado: {{ fecha_generacion.strftime('%d de %B de %Y') }}
+  </div>
+</div>
+
+{# ── Ficha cliente ── #}
+<div class="client-card">
+  <div>
+    <div class="field">
+      <div class="label">Cliente</div>
+      <div class="value">{{ cliente.nombre }}</div>
+    </div>
+    <div class="field">
+      <div class="label">{{ cliente.tipo_identificador }}</div>
+      <div class="value mono">{{ cliente.identificador }}</div>
+    </div>
+  </div>
+  <div>
+    <div class="field">
+      <div class="label">Teléfono</div>
+      <div class="value">{{ cliente.telefono or '—' }}</div>
+    </div>
+    <div class="field">
+      <div class="label">Dirección</div>
+      <div class="value">{{ cliente.direccion or '—' }}</div>
+    </div>
+  </div>
+  {% if cliente.email %}
+  <div>
+    <div class="field">
+      <div class="label">Correo</div>
+      <div class="value">{{ cliente.email }}</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Sin equipos ── #}
+{% if not items %}
+  <p class="empty">Este cliente no tiene equipos activos registrados.</p>
+{% endif %}
+
+{# ── Por cada equipo ── #}
+{% for item in items %}
+<div class="equipo-section">
+
+  {# Cabecera del equipo #}
+  <div class="equipo-header">
+    {{ item.equipo.tipo_equipo.nombre }}
+    <div class="meta">
+      Zona: {{ item.equipo.zona.nombre }}
+      {% if item.equipo.numero_serie %} · S/N {{ item.equipo.numero_serie }}{% endif %}
+      · Instalado: {{ item.equipo.fecha_instalacion.strftime('%d/%m/%Y') }}
+      {% if item.equipo.fecha_reactivacion %} · Reactivado: {{ item.equipo.fecha_reactivacion.strftime('%d/%m/%Y') }}{% endif %}
+    </div>
+  </div>
+
+  {# ── Proyección de componentes ── #}
+  <div class="section-title">Proyección de vencimientos</div>
+  {% if item.proyeccion %}
+  <table>
+    <thead>
+      <tr>
+        <th>Componente</th>
+        <th>Próximo vencimiento</th>
+        <th>Días</th>
+        <th>Estado</th>
+        <th>Intervalo usado</th>
+        <th>Fuente</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in item.proyeccion %}
+        {% if v.urgencia == 'vencido' %}{% set row_cls = 'row-vencido' %}
+        {% elif v.urgencia == 'proximo' %}{% set row_cls = 'row-proximo' %}
+        {% else %}{% set row_cls = '' %}{% endif %}
+      <tr class="{{ row_cls }}">
+        <td>{{ v.componente.nombre }}</td>
+        <td class="nowrap">{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
+        <td class="nowrap">
+          {% if v.dias_restantes < 0 %}hace {{ -v.dias_restantes }} d
+          {% elif v.dias_restantes == 0 %}hoy
+          {% else %}en {{ v.dias_restantes }} d{% endif %}
+        </td>
+        <td>
+          {% if v.urgencia == 'vencido' %}
+            <span class="badge badge-danger">Vencido</span>
+          {% elif v.urgencia == 'proximo' %}
+            <span class="badge badge-warning">Próximo</span>
+          {% else %}
+            <span class="badge badge-success">En plazo</span>
+          {% endif %}
+        </td>
+        <td class="nowrap">{{ v.intervalo_usado }} días</td>
+        <td>
+          {% if v.fuente == 'historico' %}
+            <span class="badge badge-primary">histórico</span>
+          {% else %}
+            <span class="badge badge-secondary">nominal</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="empty">Sin componentes configurados para este tipo de equipo.</p>
+  {% endif %}
+
+  {# ── Historial de mantenimientos ── #}
+  <div class="section-title" style="margin-top: 10px;">Historial de mantenimientos completados</div>
+  {% if item.historial %}
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Técnico</th>
+        <th>Intervenciones</th>
+        <th>Observaciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in item.historial %}
+      <tr>
+        <td class="nowrap">{{ m.fecha.strftime('%d/%m/%Y') }}</td>
+        <td class="nowrap">{{ m.tecnico.nombre if m.tecnico else '—' }}</td>
+        <td>
+          {% if m.detalles %}
+            <ul class="detail-list">
+              {% for d in m.detalles %}
+                <li>
+                  {{ d.componente.nombre }}
+                  <span class="badge
+                    {% if d.accion == 'reemplazo' %}badge-danger
+                    {% elif d.accion == 'limpieza' %}badge-info
+                    {% else %}badge-secondary{% endif %}">
+                    {{ d.accion }}
+                  </span>
+                  {% if d.notas %}<span class="text-muted"> — {{ d.notas }}</span>{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span class="text-muted">Sin detalles</span>
+          {% endif %}
+        </td>
+        <td>{{ m.observaciones or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="empty">No hay mantenimientos completados registrados para este equipo.</p>
+  {% endif %}
+
+</div>
+{% endfor %}
+
+{# ── Pie ── #}
+<div class="footer">
+  Watermax · Reporte generado automáticamente el {{ fecha_generacion.strftime('%d/%m/%Y') }} ·
+  Cliente: {{ cliente.nombre }} · {{ cliente.tipo_identificador }}: {{ cliente.identificador }}
+</div>
+
+</body>
+</html>
