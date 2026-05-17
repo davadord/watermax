@@ -51,12 +51,28 @@ Thumbs.db
 .claude/
 
 # Documentación de titulación y archivos personales
-ANTEPROYECTO APROBADO.docx
-ANTEPROYECTO APROBADO.pdf
-PT-INDIVIDUAL-MODELO.docx
-PT-INDIVIDUAL-MODELO.pdf
-TESIS REAL - EJEMPLO.pdf
+*.docx
+*.pdf
 anteproyecto_text.txt
 requirements_backup.txt
-watermax.zip
+*.zip
+
+# Scripts y datos de desarrollo local
 seed_historicos.py
+
+# Testing y cobertura
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Flask instance folder
+instance/
+
+# JMeter (Sprint 5)
+jmeter/
+*.jtl
+*.jmx
+
+# Logs
+*.log
