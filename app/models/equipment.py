@@ -8,7 +8,7 @@ class TipoEquipo(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     marca = db.Column(db.String(80))
     descripcion = db.Column(db.String(250))
-    componentes = db.relationship("TipoEquipoComponente", backref="tipo_equipo", lazy=True)
+    componentes = db.relationship("TipoEquipoComponente", backref="tipo_equipo", lazy=True, cascade="all, delete-orphan")
     equipos = db.relationship("EquipoInstalado", backref="tipo_equipo", lazy=True)
 
 

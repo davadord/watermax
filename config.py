@@ -21,6 +21,10 @@ class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SECRET_KEY = os.environ.get("SECRET_KEY")  # sin fallback — None si no está definida
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+    }
 
 
 config = {
