@@ -50,6 +50,10 @@ Thumbs.db
 # Claude Code (configuración local)
 .claude/
 
+# Skills CLI (skills.sh — tooling de agentes, no código de app)
+.agents/
+skills-lock.json
+
 # Documentación de titulación y archivos personales
 *.docx
 *.pdf
