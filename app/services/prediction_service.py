@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date, timedelta
 from statistics import mean
 from flask import g, has_request_context
@@ -15,6 +16,45 @@ URGENCIA_EN_PLAZO = "en_plazo"
 UMBRAL_ALERTA_DIAS = 15
 
 
+def _get_historial_reemplazos_map():
+    """
+    Mapa request-scoped {(equipo_id, componente_id): [fecha_ordenada, ...]}
+    con todos los reemplazos válidos del sistema. Pre-cargado en 1 query.
+    Sustituye las ~20.000 queries de _intervalo_efectivo por una sola.
+    Fuera de contexto de request (CLI/tests) retorna None y los callers
+    caen al query per-call.
+    """
+    if not has_request_context():
+        return None
+
+    cached = getattr(g, "_historial_reemplazos", None)
+    if cached is not None:
+        return cached
+
+    stmt = (
+        select(
+            Mantenimiento.equipo_id,
+            DetalleMantenimiento.componente_id,
+            Mantenimiento.fecha,
+        )
+        .select_from(DetalleMantenimiento)
+        .join(Mantenimiento)
+        .where(
+            Mantenimiento.completado == True,
+            Mantenimiento.motivo_anulacion == None,
+            DetalleMantenimiento.accion == "reemplazo",
+        )
+        .order_by(Mantenimiento.fecha)
+    )
+
+    mapa = defaultdict(list)
+    for equipo_id, componente_id, fecha in db.session.execute(stmt).all():
+        mapa[(equipo_id, componente_id)].append(fecha)
+
+    g._historial_reemplazos = mapa
+    return mapa
+
+
 def _intervalo_efectivo(equipo, componente):
     """
     Retorna (intervalo_dias, fuente, ultima_fecha_reemplazo).
@@ -23,20 +63,24 @@ def _intervalo_efectivo(equipo, componente):
     """
     intervalo_nominal = componente.intervalo_nominal * 30
 
-    stmt = (
-        select(DetalleMantenimiento)
-        .join(Mantenimiento)
-        .where(
-            Mantenimiento.equipo_id == equipo.id,
-            Mantenimiento.completado == True,
-            Mantenimiento.motivo_anulacion == None,
-            DetalleMantenimiento.componente_id == componente.id,
-            DetalleMantenimiento.accion == "reemplazo",
+    mapa = _get_historial_reemplazos_map()
+    if mapa is not None:
+        fechas = list(mapa.get((equipo.id, componente.id), []))
+    else:
+        stmt = (
+            select(DetalleMantenimiento)
+            .join(Mantenimiento)
+            .where(
+                Mantenimiento.equipo_id == equipo.id,
+                Mantenimiento.completado == True,
+                Mantenimiento.motivo_anulacion == None,
+                DetalleMantenimiento.componente_id == componente.id,
+                DetalleMantenimiento.accion == "reemplazo",
+            )
+            .order_by(Mantenimiento.fecha)
         )
-        .order_by(Mantenimiento.fecha)
-    )
-    historial = db.session.execute(stmt).scalars().all()
-    fechas = [d.mantenimiento.fecha for d in historial]
+        historial = db.session.execute(stmt).scalars().all()
+        fechas = [d.mantenimiento.fecha for d in historial]
 
     if equipo.fecha_reactivacion:
         fechas = [f for f in fechas if f >= equipo.fecha_reactivacion]
