@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}Editar mantenimiento — Watermax{% endblock %}
+{% block content %}
+
+{% set _bc = [
+  ("Mantenimientos", url_for('maintenance.listado_mantenimientos')),
+  ("Editar", None)
+] %}
+
+{% call page_header(
+    "Editar mantenimiento",
+    subtitle=equipo.tipo_equipo.nombre
+             ~ (' · ' ~ equipo.tipo_equipo.marca if equipo.tipo_equipo.marca else '')
+             ~ ' · ' ~ equipo.cliente.nombre
+             ~ (' · S/N ' ~ equipo.numero_serie if equipo.numero_serie else ''),
+    icon="pencil-square",
+    breadcrumb=_bc) %}
+{% endcall %}
+
+<form method="POST" novalidate data-autofocus>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="wm-form-card mb-3">
+    <h2 class="h6 text-uppercase text-muted mb-3">Datos del trabajo</h2>
+    <div class="wm-form-grid">
+      <div>
+        <label class="form-label required" for="fecha">Fecha de intervención</label>
+        <input type="date" id="fecha" name="fecha" class="form-control" required
+               value="{{ mant.fecha.strftime('%Y-%m-%d') }}"
+               max="{{ hoy.strftime('%Y-%m-%d') }}">
+      </div>
+      <div>
+        <label class="form-label required" for="tecnico_id">Técnico</label>
+        <select id="tecnico_id" name="tecnico_id" class="form-select" required>
+          {% for t in tecnicos %}
+            <option value="{{ t.id }}" {{ 'selected' if t.id == mant.tecnico_id }}>
+              {{ t.nombre }} ({{ t.rol }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-span-2">
+        <label class="form-label" for="observaciones">Observaciones generales <span class="text-muted small">(opcional)</span></label>
+        <input type="text" id="observaciones" name="observaciones" class="form-control" maxlength="500"
+               value="{{ mant.observaciones or '' }}"
+               placeholder="Condiciones del equipo, acceso, novedades…">
+      </div>
+    </div>
+  </div>
+
+  <div class="wm-form-card">
+    <div class="d-flex justify-content-between align-items-end mb-2 flex-wrap gap-2">
+      <div>
+        <h2 class="h6 text-uppercase text-muted mb-1">Componentes intervenidos</h2>
+        <p class="text-muted small mb-0">Al menos un componente es obligatorio.</p>
+      </div>
+      {% if componentes %}
+      <div class="btn-group btn-group-sm" role="group" aria-label="Aplicar acción a todos">
+        <button type="button" class="btn btn-outline-secondary" data-bulk-action="">— ninguno —</button>
+        <button type="button" class="btn btn-outline-success"   data-bulk-action="reemplazo">Todo reemplazo</button>
+        <button type="button" class="btn btn-outline-info"      data-bulk-action="limpieza">Todo limpieza</button>
+        <button type="button" class="btn btn-outline-secondary" data-bulk-action="revision">Todo revisión</button>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if not componentes %}
+      <div class="alert alert-warning d-flex gap-2 mt-2 mb-0">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div>Este tipo de equipo no tiene componentes. Configúralos desde
+          <a href="{{ url_for('admin.editar_tipo_equipo', id=equipo.tipo_equipo_id) }}" class="alert-link">el tipo de equipo</a>.
+        </div>
+      </div>
+    {% else %}
+    <div class="table-responsive mt-2">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Componente</th>
+            <th style="width:220px;">Acción</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for comp in componentes %}
+          {% set det = detalles_map.get(comp.id) %}
+          <tr>
+            <td>
+              <strong>{{ comp.nombre }}</strong>
+              <div class="text-muted small">
+                Intervalo nominal: {{ comp.intervalo_nominal }} mes{% if comp.intervalo_nominal != 1 %}es{% endif %}
+              </div>
+            </td>
+            <td>
+              <select name="accion_{{ comp.id }}" class="form-select form-select-sm wm-accion">
+                <option value=""         {{ 'selected' if not det }}>— sin intervención —</option>
+                <option value="reemplazo" {{ 'selected' if det and det.accion == 'reemplazo' }}>Reemplazo</option>
+                <option value="limpieza"  {{ 'selected' if det and det.accion == 'limpieza' }}>Limpieza</option>
+                <option value="revision"  {{ 'selected' if det and det.accion == 'revision' }}>Revisión</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" name="notas_{{ comp.id }}" class="form-control form-control-sm"
+                     maxlength="200"
+                     value="{{ det.notas if det and det.notas else '' }}"
+                     placeholder="Opcional">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="d-flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary" {% if not componentes %}disabled{% endif %}>
+      <i class="bi bi-check-lg"></i> Guardar cambios
+    </button>
+    <a href="{{ url_for('maintenance.listado_mantenimientos') }}" class="btn btn-light">Cancelar</a>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-bulk-action]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var val = btn.dataset.bulkAction;
+    document.querySelectorAll('select.wm-accion').forEach(function (s) {
+      s.value = val;
+    });
+  });
+});
+</script>
+{% endblock %}

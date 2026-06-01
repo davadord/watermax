@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state, icon_link %}
+{% block title %}Mantenimientos — Watermax{% endblock %}
+{% block content %}
+
+{% call page_header("Mantenimientos", icon="clipboard2-check",
+    breadcrumb=[("Mantenimientos", None)]) %}
+{% endcall %}
+
+<form method="GET" class="wm-form-card mb-4">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label" for="cliente_id">Cliente</label>
+      <select name="cliente_id" id="cliente_id" class="form-select">
+        <option value="">— Todos los clientes —</option>
+        {% for c in clientes %}
+          <option value="{{ c.id }}" {{ 'selected' if c.id == cliente_id }}>{{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="fecha_desde">Desde</label>
+      <input type="date" id="fecha_desde" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="fecha_hasta">Hasta</label>
+      <input type="date" id="fecha_hasta" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-grow-1">
+        <i class="bi bi-search"></i> Filtrar
+      </button>
+      <a href="{{ url_for('maintenance.listado_mantenimientos') }}" class="btn btn-light"
+         title="Limpiar filtros" aria-label="Limpiar filtros">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+  </div>
+</form>
+
+{% if not paginacion.items %}
+  {{ empty_state("Sin registros", "No hay mantenimientos que coincidan con los filtros.", icon="clipboard2-x") }}
+{% else %}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Fecha</th>
+        <th>Equipo · Cliente</th>
+        <th>Técnico</th>
+        <th>Componentes</th>
+        <th>Estado</th>
+        <th class="text-end">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mant in paginacion.items %}
+      <tr class="{{ 'table-secondary text-muted' if mant.motivo_anulacion }}">
+        <td class="text-nowrap">{{ mant.fecha.strftime('%d/%m/%Y') }}</td>
+        <td>
+          <div class="fw-semibold small">{{ mant.equipo.tipo_equipo.nombre }}</div>
+          <div class="text-muted small">
+            {{ mant.equipo.cliente.nombre }}
+            {% if mant.equipo.numero_serie %}&nbsp;· S/N {{ mant.equipo.numero_serie }}{% endif %}
+          </div>
+        </td>
+        <td class="small">{{ mant.tecnico.nombre }}</td>
+        <td>
+          {% for d in mant.detalles %}
+            {% if d.accion == 'reemplazo' %}
+              <span class="badge bg-success">{{ d.componente.nombre }}</span>
+            {% elif d.accion == 'limpieza' %}
+              <span class="badge bg-info text-dark">{{ d.componente.nombre }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ d.componente.nombre }}</span>
+            {% endif %}
+          {% endfor %}
+        </td>
+        <td class="small">
+          {% if mant.motivo_anulacion %}
+            <span class="text-danger"><i class="bi bi-slash-circle-fill"></i> Anulado</span>
+            <div class="text-muted fst-italic" style="font-size:.8em;">{{ mant.motivo_anulacion }}</div>
+          {% else %}
+            <span class="text-success"><i class="bi bi-check-circle-fill"></i> Válido</span>
+          {% endif %}
+        </td>
+        <td class="text-end">
+          {% if not mant.motivo_anulacion %}
+          <div class="d-flex justify-content-end gap-1">
+            {{ icon_link(url_for('maintenance.editar_mantenimiento', mant_id=mant.id), 'pencil', 'Editar') }}
+            <button type="button"
+                    class="btn btn-outline-warning wm-icon-btn"
+                    data-bs-toggle="tooltip" title="Anular"
+                    aria-label="Anular mantenimiento"
+                    data-anular-id="{{ mant.id }}"
+                    data-anular-info="{{ mant.fecha.strftime('%d/%m/%Y') }} · {{ mant.equipo.tipo_equipo.nombre }} · {{ mant.equipo.cliente.nombre }}">
+              <i class="bi bi-slash-circle" aria-hidden="true"></i>
+            </button>
+          </div>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if paginacion.pages > 1 %}
+<nav aria-label="Paginación de mantenimientos">
+  <ul class="pagination justify-content-center">
+    <li class="page-item {{ 'disabled' if not paginacion.has_prev }}">
+      <a class="page-link" href="{{ url_for('maintenance.listado_mantenimientos',
+          page=paginacion.prev_num, cliente_id=cliente_id or '', fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
+        &laquo;
+      </a>
+    </li>
+    {% for p in paginacion.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+        <li class="page-item {{ 'active' if p == paginacion.page }}">
+          <a class="page-link" href="{{ url_for('maintenance.listado_mantenimientos',
+              page=p, cliente_id=cliente_id or '', fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
+            {{ p }}
+          </a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if not paginacion.has_next }}">
+      <a class="page-link" href="{{ url_for('maintenance.listado_mantenimientos',
+          page=paginacion.next_num, cliente_id=cliente_id or '', fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
+        &raquo;
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endif %}
+
+{# Modal de anulación — único en la página, alimentado por JS #}
+<div class="modal fade" id="modal-anular" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-slash-circle text-warning me-1"></i> Anular mantenimiento
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="POST" id="form-anular" action="#">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <p id="anular-info" class="text-muted small mb-3"></p>
+          <p class="mb-2 small">El registro se conservará en la base de datos pero quedará excluido
+            de reportes y del cálculo de próximos mantenimientos.</p>
+          <label class="form-label required" for="motivo">Motivo de anulación</label>
+          <input type="text" id="motivo" name="motivo" class="form-control" maxlength="200"
+                 required placeholder="Ej: Equipo incorrecto, fecha errónea, técnico equivocado…">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-warning">
+            <i class="bi bi-slash-circle"></i> Confirmar anulación
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-anular-id]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var id = btn.dataset.anularId;
+    document.getElementById('anular-info').textContent = btn.dataset.anularInfo;
+    document.getElementById('form-anular').action = '/maintenance/' + id + '/anular';
+    document.getElementById('motivo').value = '';
+    new bootstrap.Modal(document.getElementById('modal-anular')).show();
+  });
+});
+</script>
+{% endblock %}

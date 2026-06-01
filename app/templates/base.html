@@ -55,6 +55,12 @@
             <i class="bi bi-tools"></i> Equipos
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if ep == 'maintenance.listado_mantenimientos' %}active{% endif %}"
+             href="{{ url_for('maintenance.listado_mantenimientos') }}">
+            <i class="bi bi-clipboard2-check"></i> Mantenimientos
+          </a>
+        </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle {% if ep.startswith('admin.') and ep not in ('admin.clientes', 'admin.nuevo_cliente', 'admin.editar_cliente', 'admin.equipos', 'admin.nuevo_equipo', 'admin.editar_equipo') %}active{% endif %}"
              href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">

@@ -89,6 +89,7 @@ def get_reporte_cliente(cliente_id: int) -> dict:
             .where(
                 Mantenimiento.equipo_id == equipo.id,
                 Mantenimiento.completado == True,
+                Mantenimiento.motivo_anulacion == None,
             )
             .options(
                 joinedload(Mantenimiento.detalles)

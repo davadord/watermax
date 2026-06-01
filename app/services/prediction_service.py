@@ -28,6 +28,7 @@ def _intervalo_efectivo(equipo, componente):
         .where(
             Mantenimiento.equipo_id == equipo.id,
             Mantenimiento.completado == True,
+            Mantenimiento.motivo_anulacion == None,
             DetalleMantenimiento.componente_id == componente.id,
             DetalleMantenimiento.accion == "reemplazo",
         )

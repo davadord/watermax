@@ -11,6 +11,7 @@ class Mantenimiento(db.Model):
     fecha = db.Column(db.Date, nullable=False, default=date.today)
     observaciones = db.Column(db.Text)
     completado = db.Column(db.Boolean, default=False)
+    motivo_anulacion = db.Column(db.String(200), nullable=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     detalles = db.relationship("DetalleMantenimiento", backref="mantenimiento", lazy=True)
     tecnico = db.relationship("Usuario", foreign_keys=[tecnico_id])
