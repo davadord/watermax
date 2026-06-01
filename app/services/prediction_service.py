@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from statistics import mean
+from flask import g, has_request_context
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from app import db
@@ -124,6 +125,19 @@ def get_equipos_criticos(zona_id=None, urgencia=None):
         ]
     }
     """
+    # Cache request-scoped: dashboard view y context_processor (navbar) llaman
+    # a esta función en el mismo request. Sin cache, con 2000 equipos se
+    # duplican ~10.000 queries del motor predictivo por request.
+    cache = None
+    if has_request_context():
+        cache = getattr(g, "_equipos_criticos_cache", None)
+        if cache is None:
+            cache = {}
+            g._equipos_criticos_cache = cache
+        cache_key = (zona_id, urgencia)
+        if cache_key in cache:
+            return cache[cache_key]
+
     orden_urgencia = {URGENCIA_VENCIDO: 0, URGENCIA_PROXIMO: 1, URGENCIA_EN_PLAZO: 2}
 
     stmt = (
@@ -167,4 +181,7 @@ def get_equipos_criticos(zona_id=None, urgencia=None):
         })
 
     resultado.sort(key=lambda x: (orden_urgencia[x["urgencia_maxima"]], x["dias_min"]))
+
+    if cache is not None:
+        cache[cache_key] = resultado
     return resultado
