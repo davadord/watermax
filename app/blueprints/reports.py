@@ -39,7 +39,7 @@ def dashboard():
             })
         mantenimientos_hoy.sort(key=lambda x: x["_sort"])
 
-    criticos_global = get_equipos_criticos()
+    criticos_global = get_equipos_criticos(with_detail=False)
     resumen_global = {
         "vencidos": sum(1 for i in criticos_global if i["urgencia_maxima"] == URGENCIA_VENCIDO),
         "proximos": sum(1 for i in criticos_global if i["urgencia_maxima"] == URGENCIA_PROXIMO),

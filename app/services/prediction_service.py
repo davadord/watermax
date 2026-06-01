@@ -154,13 +154,18 @@ def calcular_proximo_componente(equipo, componente, fecha_intervencion):
     return fecha_intervencion + timedelta(days=intervalo_dias)
 
 
-def get_equipos_criticos(zona_id=None, urgencia=None):
+def get_equipos_criticos(zona_id=None, urgencia=None, with_detail=True):
     """
     Retorna lista de dicts para todos los equipos activos que tienen al menos
     un componente vencido o próximo a vencer.
 
     Carga relaciones con joinedload para evitar N+1 queries.
     Filtra opcionalmente por zona_id y/o urgencia ('vencido' | 'proximo').
+
+    with_detail=False omite el joinedload de zona y cliente: el dashboard y el
+    badge del navbar solo cuentan (urgencia_maxima), no acceden a esas
+    relaciones, y cargarlas para 2000 equipos infla la hidratación ORM ~27%.
+    La vista /criticos sí las muestra, así que usa el default (True).
 
     Cada dict:
     {
@@ -184,16 +189,19 @@ def get_equipos_criticos(zona_id=None, urgencia=None):
 
     orden_urgencia = {URGENCIA_VENCIDO: 0, URGENCIA_PROXIMO: 1, URGENCIA_EN_PLAZO: 2}
 
+    opciones = [
+        joinedload(EquipoInstalado.tipo_equipo)
+            .joinedload(TipoEquipo.componentes)
+            .joinedload(TipoEquipoComponente.componente),
+    ]
+    if with_detail:
+        opciones.append(joinedload(EquipoInstalado.zona))
+        opciones.append(joinedload(EquipoInstalado.cliente))
+
     stmt = (
         select(EquipoInstalado)
         .where(EquipoInstalado.activo == True)
-        .options(
-            joinedload(EquipoInstalado.tipo_equipo)
-                .joinedload(TipoEquipo.componentes)
-                .joinedload(TipoEquipoComponente.componente),
-            joinedload(EquipoInstalado.zona),
-            joinedload(EquipoInstalado.cliente),
-        )
+        .options(*opciones)
     )
     if zona_id:
         stmt = stmt.where(EquipoInstalado.zona_id == zona_id)
