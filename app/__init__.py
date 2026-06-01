@@ -50,6 +50,8 @@ def create_app(config_name="default"):
     def index():
         return redirect(url_for("reports.dashboard"))
 
+    NAVBAR_REPORTS_ENDPOINTS = {"reports.dashboard", "reports.criticos"}
+
     @app.context_processor
     def inject_globals():
         from flask import request as _req
@@ -59,7 +61,7 @@ def create_app(config_name="default"):
             and getattr(current_user, "rol", None) in ("propietario", "administrativo")
         )
         alertas_count = 0
-        if current_user.is_authenticated and (_req.endpoint or "").startswith("reports."):
+        if current_user.is_authenticated and _req.endpoint in NAVBAR_REPORTS_ENDPOINTS:
             criticos = get_equipos_criticos()
             alertas_count = sum(
                 1 for item in criticos if item["urgencia_maxima"] == URGENCIA_VENCIDO
