@@ -14,7 +14,7 @@
 | S3 | #10 #11 #12 #23 #26 — Alertas críticas, dashboard global, motor refinado | Completado | 2026-05-14 |
 | S4 | #13 #14 #15 — report_service, PDFs WeasyPrint | Completado | 2026-05-14 |
 | Auditoría pre-S5 | Correcciones bloqueantes para PythonAnywhere | Completado | 2026-05-14 |
-| **S5** | #16 #17 #18 #19 #20 | **En curso** — #18 cerrado 2026-05-25 | due 2026-07-04 |
+| **S5** | #16 #17 #18 #19 #20 #29 | **En curso** — #18 cerrado 2026-05-25, #29 cerrado 2026-05-31 | due 2026-07-04 |
 
 ---
 
@@ -25,7 +25,8 @@
 | # | Título | MoSCoW | Estimación | Estado |
 |---|--------|--------|-----------|--------|
 | #18 | Despliegue en PythonAnywhere (plan Developer) | must-have | 8 h | **Cerrado** 2026-05-25 |
-| #16 | Tests de rendimiento con JMeter | must-have | 8 h | **En progreso** — plan ejecutado, criterios pendientes (ver R6) |
+| #29 | Listado, edición y anulación de mantenimientos | must-have | 12 h | **Cerrado** 2026-05-31 |
+| #16 | Tests de rendimiento con JMeter | must-have | 8 h | **En progreso** — 3 optimizaciones aplicadas (29x dashboard, 6x PDF). PDF y dashboard concurrente quedan en #30 |
 | #17 | Evaluación de usabilidad SUS (≥68 puntos) | must-have | 8 h | Abierto |
 | #19 | Configuración de dominio .com | should-have | 4 h | Abierto |
 | #20 | Documentación técnica final (ISO/IEC 25010) | must-have | 16 h | Abierto |
@@ -40,6 +41,7 @@ App desplegada en: https://dordonezm2.pythonanywhere.com/ (plan Developer)
 |---|--------|--------|---------|
 | ~~#27~~ | ~~Verificar instalación de mysqlclient en PythonAnywhere~~ | Auditoría 2026-05-14 | **Cerrado** 2026-05-31 — mysqlclient 2.2.8 funciona sin cambios en PA |
 | #28 | Mejorar diseño páginas de error 404/500 | Auditoría 2026-05-14 | — |
+| #30 | Optimizar dashboard bajo carga y generación PDF en PA | JMeter p4 (2026-06-01) | Cierre completo de #16 |
 
 ---
 
@@ -58,6 +60,9 @@ Funcionalidad completamente implementada y funcionando en desarrollo:
 - Páginas de error 404/500/403 personalizadas
 - Entry point WSGI (`wsgi.py`) para PythonAnywhere
 - Validación de variables de entorno al arrancar en modo producción
+- Listado global de mantenimientos con filtros por cliente y fechas (roles admin)
+- Edición completa de mantenimientos con recálculo del motor predictivo
+- Anulación de mantenimientos con motivo (soft delete — excluidos de motor predictivo y PDFs)
 
 ---
 
@@ -107,19 +112,26 @@ para instalación inicial.
 
 #27 cerrado 2026-05-31: mysqlclient 2.2.8 funciona sin cambios en PA. #18 cerrado 2026-05-25.
 
-### R6 — get_equipos_criticos() ejecuta dos veces por request — BLOQUEANTE para #16
+### ~~R6 — get_equipos_criticos() ejecuta dos veces por request~~ — RESUELTO 2026-06-01
 
-Detectado mediante JMeter el 2026-06-01. El context_processor que dibuja el badge de
-alertas en navbar llama a `get_equipos_criticos()` en cada request de rutas `reports.*`,
-igual que las views que lo usan (dashboard, criticos). Con 2.000 equipos activos en PA:
-~20.000 queries por request → dashboard tarda ~60 s → timeout en JMeter.
+Detectado mediante JMeter el 2026-06-01. Resuelto con tres commits en cadena:
 
-Resultados del run completo (PA, 2026-06-01):
-- `GET /reports/dashboard`: Average 59.566 ms, Error 100% (criterio: ≤ 2.000 ms)
-- `GET /reports/zona/1/pdf`: Average 55.611 ms, Error 100% (criterio: ≤ 5.000 ms)
+1. `02073f7` — Cachear `get_equipos_criticos()` en `flask.g`.
+2. `463dfc1` — Batch del historial de reemplazos en una sola query (`_get_historial_reemplazos_map`).
+3. `7ca4fed` — Skip de `get_equipos_criticos()` en context_processor para endpoints PDF.
 
-**Fix pendiente:** cachear resultado en `flask.g` dentro de `get_equipos_criticos()`.
-El context_processor reutilizará el valor ya calculado por la view en el mismo request.
+Mejora en PA (2.000 equipos, plan Developer):
+
+| Endpoint | Antes | Después (p4) | Mejora |
+|---|---|---|---|
+| GET /reports/dashboard | 59.566 ms (timeout) | 1.911 ms (mean), 1.917 ms (median) | **31x** |
+| GET /reports/zona/1/pdf | 55.611 ms (timeout) | 8.845 ms (mean) | **6.3x** |
+
+Resultados en `watermax-notas/sprints/sprint5/jmeter/resultados/p4/`.
+
+Optimización pendiente trasladada al issue #30:
+- Dashboard p99 bajo 4-concurrent excede 2 s (max 2.748 ms).
+- PDF ≥ 5 s en todos los samples (CPU-bound de WeasyPrint).
 
 ---
 
@@ -127,24 +139,25 @@ El context_processor reutilizará el valor ya calculado por la view en el mismo 
 
 - Sin suite de tests automatizados. Criterios de aceptación validados manualmente.
 - `Mantenimiento.completado` siempre es `True` al crear — nunca se filtra en ninguna query. El campo existe pero no captura ningún estado real del negocio (no hay mantenimientos "en curso"). Dead weight hasta que se implemente ese flujo.
-- Motor predictivo se recalcula en cada request (sin caché). Aceptable para el volumen esperado.
-- `get_equipos_criticos()` se ejecuta **dos veces** por request en rutas `reports.*`:
-  una en la view (dashboard/criticos) y otra en el context_processor del badge de navbar.
-  Con 2.000 equipos activos genera ~20.000 queries por request. Medido en JMeter (#16):
-  dashboard tarda ~60 s en PA → criterio ≤ 2 s no cumplido. Pendiente cachear con `flask.g`.
-- PDFs generados síncronamente por WeasyPrint. Sin procesamiento asíncrono.
-  Puede ser lento con reportes muy grandes.
+- Motor predictivo: `get_equipos_criticos()` itera 2.000 equipos en memoria por request.
+  Tras optimizaciones del 2026-06-01 (commits `02073f7`, `463dfc1`, `7ca4fed`) ejecuta
+  1 query SQL en lugar de ~20.000. Aceptable para volumen actual en PA Developer.
+  Pendiente: max p99 bajo 4-concurrent llega a 2.7 s (criterio #16 era ≤ 2 s). Ver #30.
+- PDFs generados síncronamente por WeasyPrint. En PA Developer 8-12 s por reporte de
+  50 equipos (CPU-bound). Criterio #16 era ≤ 5 s. Sin caché ni asincronía. Ver #30.
 - `setup_db.py` está en el repo (commit b6a33a5). Sin dependencias externas para reproducir el entorno.
 
 ---
 
 ## Próximos pasos
 
-1. **#16 (bloqueante):** cachear `get_equipos_criticos()` en `flask.g`, re-correr JMeter
-   en modo no-GUI y verificar criterios ≤ 2 s (dashboard) y ≤ 5 s (PDF). Cerrar issue.
-2. **#17:** evaluación SUS con usuarios reales (≥ 68 puntos).
-3. **#19:** configurar dominio .com.
-4. **#20:** redactar documentación ISO 25010 con resultados de #16 y #17.
+1. **#16:** decisión de cierre pendiente — pasan criterios 1, 4 y 5; criterio 2 (dashboard)
+   cumple en mediana pero no en p99 bajo carga; criterio 3 (PDF) no cumple. Trabajo
+   restante movido a #30. Sesión cerrada el 2026-06-01 sin cerrar #16.
+2. **#30:** profilar y optimizar dashboard concurrente + PDF.
+3. **#17:** evaluación SUS con usuarios reales (≥ 68 puntos).
+4. **#19:** configurar dominio .com.
+5. **#20:** redactar documentación ISO 25010 con resultados de #16 y #17.
 
 ---
 
