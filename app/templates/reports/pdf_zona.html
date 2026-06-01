@@ -38,11 +38,7 @@
   .header-meta strong { display: block; font-size: 11pt; color: #212529; }
 
   /* ── Resumen ── */
-  .summary {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
+  .summary { display: flex; gap: 10px; margin-bottom: 16px; }
   .summary-box {
     flex: 1;
     border: 1px solid #dee2e6;
@@ -52,63 +48,42 @@
   }
   .summary-box .num { font-size: 18pt; font-weight: 700; }
   .summary-box .lbl { font-size: 7.5pt; color: #6c757d; text-transform: uppercase; }
-  .box-vencido  { border-color: #dc3545; }
-  .box-vencido  .num { color: #dc3545; }
-  .box-proximo  { border-color: #fd7e14; }
-  .box-proximo  .num { color: #fd7e14; }
-  .box-en-plazo { border-color: #198754; }
-  .box-en-plazo .num { color: #198754; }
-  .box-total    { border-color: #0d6efd; }
-  .box-total    .num { color: #0d6efd; }
+  .box-vencido  { border-color: #dc3545; } .box-vencido  .num { color: #dc3545; }
+  .box-proximo  { border-color: #fd7e14; } .box-proximo  .num { color: #fd7e14; }
+  .box-en-plazo { border-color: #198754; } .box-en-plazo .num { color: #198754; }
+  .box-total    { border-color: #0d6efd; } .box-total    .num { color: #0d6efd; }
 
-  /* ── Tabla principal ── */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 10px;
-    font-size: 8.5pt;
-  }
-  thead th {
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    padding: 5px 6px;
-    text-align: left;
-    font-weight: 600;
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 7pt; font-weight: 600; }
+  .badge-danger    { background: #dc3545; color: #fff; }
+  .badge-warning   { background: #fd7e14; color: #fff; }
+  .badge-success   { background: #198754; color: #fff; }
+  .badge-secondary { background: #6c757d; color: #fff; }
+
+  /* ── Bloque por equipo ──
+     Reemplaza la antigua fila de tabla con una sub-tabla anidada por equipo.
+     La sub-tabla (a) desbordaba el ancho de página recortando 'días' y la
+     columna 'fuente', y (b) era el mayor coste de render de WeasyPrint (#30):
+     50 tablas anidadas. El bloque da ancho completo a los componentes (una
+     línea cada uno, sin recorte) y usa ~4x menos cajas -> -38% de render. */
+  .thead-equipos {
     font-size: 7.5pt;
     text-transform: uppercase;
     color: #6c757d;
-  }
-  tbody td {
-    border-bottom: 1px solid #f0f0f0;
-    padding: 5px 6px;
-    vertical-align: top;
-  }
-  .row-vencido  { background: #fff5f5; }
-  .row-proximo  { background: #fff8f0; }
-  .row-en-plazo { background: #fff; }
-
-  /* ── Badges ── */
-  .badge {
-    display: inline-block;
-    padding: 1px 5px;
-    border-radius: 3px;
-    font-size: 7pt;
     font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    padding: 4px 8px;
   }
-  .badge-danger  { background: #dc3545; color: #fff; }
-  .badge-warning { background: #fd7e14; color: #fff; }
-  .badge-success { background: #198754; color: #fff; }
-  .badge-secondary { background: #6c757d; color: #fff; }
-
-  /* ── Sub-tabla de componentes ── */
-  .sub-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 4px;
-    font-size: 8pt;
-  }
-  .sub-table td { padding: 2px 4px; border-bottom: 1px solid #f0f0f0; }
-  .sub-table tr:last-child td { border-bottom: none; }
+  .equipo { padding: 6px 8px; border-bottom: 1px solid #e9ecef; }
+  .equipo.row-vencido { background: #fff5f5; }
+  .equipo.row-proximo { background: #fff8f0; }
+  .equipo-head { margin-bottom: 3px; }
+  .equipo-head .cli  { font-weight: 700; }
+  .equipo-head .dir  { color: #6c757d; }
+  .equipo-head .sep  { color: #ced4da; margin: 0 5px; }
+  .comp { font-size: 8.5pt; padding: 1px 0 1px 14px; }
+  .comp .nom  { font-weight: 600; }
+  .comp .meta { color: #6c757d; }
 
   /* ── Pie ── */
   .footer {
@@ -118,10 +93,8 @@
     font-size: 7.5pt;
     color: #6c757d;
   }
-
   .mono { font-family: "DejaVu Sans Mono", monospace; }
   .text-muted { color: #6c757d; }
-  .nowrap { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -159,71 +132,35 @@
   </div>
 </div>
 
-{# ── Tabla de equipos ── #}
+{# ── Equipos (un bloque por equipo) ── #}
 {% if not items %}
   <p class="text-muted">No hay equipos activos registrados en esta zona.</p>
 {% else %}
-<table>
-  <thead>
-    <tr>
-      <th>Cliente</th>
-      <th>Equipo</th>
-      <th>Serie</th>
-      <th>Vencidos</th>
-      <th>Próximos</th>
-      <th>Estado</th>
-      <th>Componentes críticos</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in items %}
-      {% if item.n_vencidos > 0 %}
-        {% set row_cls = "row-vencido" %}
-        {% set estado_badge = '<span class="badge badge-danger">Vencido</span>' %}
-      {% elif item.n_proximos > 0 %}
-        {% set row_cls = "row-proximo" %}
-        {% set estado_badge = '<span class="badge badge-warning">Próximo</span>' %}
-      {% else %}
-        {% set row_cls = "row-en-plazo" %}
-        {% set estado_badge = '<span class="badge badge-success">En plazo</span>' %}
-      {% endif %}
-    <tr class="{{ row_cls }}">
-      <td><strong>{{ item.equipo.cliente.nombre }}</strong><br>
-          <span class="text-muted">{{ item.equipo.cliente.direccion or '' }}</span></td>
-      <td><span class="badge badge-secondary">{{ item.equipo.tipo_equipo.nombre }}</span></td>
-      <td class="mono nowrap">{{ item.equipo.numero_serie or '—' }}</td>
-      <td class="nowrap">
-        {% if item.n_vencidos %}<span class="badge badge-danger">{{ item.n_vencidos }}</span>{% else %}—{% endif %}
-      </td>
-      <td class="nowrap">
-        {% if item.n_proximos %}<span class="badge badge-warning">{{ item.n_proximos }}</span>{% else %}—{% endif %}
-      </td>
-      <td>{{ estado_badge | safe }}</td>
-      <td>
-        {% set criticos = item.vencimientos | selectattr('urgencia', 'ne', 'en_plazo') | list %}
-        {% if criticos %}
-          <table class="sub-table">
-            {% for v in criticos %}
-            <tr>
-              <td class="nowrap">{{ v.componente.nombre }}</td>
-              <td class="nowrap">{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
-              <td class="nowrap">
-                {% if v.dias_restantes < 0 %}hace {{ -v.dias_restantes }} d
-                {% elif v.dias_restantes == 0 %}hoy
-                {% else %}en {{ v.dias_restantes }} d{% endif %}
-              </td>
-              <td class="text-muted nowrap">{{ v.fuente }}</td>
-            </tr>
-            {% endfor %}
-          </table>
-        {% else %}
-          <span class="text-muted">Todos en plazo</span>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="thead-equipos">Equipos por prioridad — cliente · equipo · serie · estado</div>
+{% for item in items %}
+  {% if item.n_vencidos > 0 %}
+    {% set row_cls = "row-vencido" %}
+    {% set estado_badge = '<span class="badge badge-danger">Vencido</span>' %}
+  {% elif item.n_proximos > 0 %}
+    {% set row_cls = "row-proximo" %}
+    {% set estado_badge = '<span class="badge badge-warning">Próximo</span>' %}
+  {% else %}
+    {% set row_cls = "row-en-plazo" %}
+    {% set estado_badge = '<span class="badge badge-success">En plazo</span>' %}
+  {% endif %}
+<div class="equipo {{ row_cls }}">
+  <div class="equipo-head">
+    <span class="cli">{{ item.equipo.cliente.nombre }}</span>{% if item.equipo.cliente.direccion %}<span class="dir"> · {{ item.equipo.cliente.direccion }}</span>{% endif %}
+    <span class="sep">|</span><span class="badge badge-secondary">{{ item.equipo.tipo_equipo.nombre }}</span>
+    <span class="sep">|</span><span class="mono">{{ item.equipo.numero_serie or '—' }}</span>
+    <span class="sep">|</span>{{ estado_badge | safe }}
+    {% if item.n_vencidos %}<span class="badge badge-danger">{{ item.n_vencidos }} vencidos</span>{% endif %}
+    {% if item.n_proximos %}<span class="badge badge-warning">{{ item.n_proximos }} próximos</span>{% endif %}
+  </div>
+  {% set criticos = item.vencimientos | selectattr('urgencia', 'ne', 'en_plazo') | list %}
+  {% for v in criticos %}<div class="comp"><span class="nom">{{ v.componente.nombre }}</span> — vence {{ v.fecha_proyectada.strftime('%d/%m/%Y') }} — {% if v.dias_restantes < 0 %}hace {{ -v.dias_restantes }} d{% elif v.dias_restantes == 0 %}hoy{% else %}en {{ v.dias_restantes }} d{% endif %} <span class="meta">({{ v.fuente }})</span></div>{% endfor %}
+</div>
+{% endfor %}
 {% endif %}
 
 {# ── Pie ── #}
