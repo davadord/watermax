@@ -143,8 +143,10 @@ Optimización pendiente trasladada al issue #30:
   Tras optimizaciones del 2026-06-01 (commits `02073f7`, `463dfc1`, `7ca4fed`) ejecuta
   1 query SQL en lugar de ~20.000. Aceptable para volumen actual en PA Developer.
   Pendiente: max p99 bajo 4-concurrent llega a 2.7 s (criterio #16 era ≤ 2 s). Ver #30.
-- PDFs generados síncronamente por WeasyPrint. En PA Developer 8-12 s por reporte de
-  50 equipos (CPU-bound). Criterio #16 era ≤ 5 s. Sin caché ni asincronía. Ver #30.
+- PDF por zona migrado a reportlab (#30, D16): render local 1228→244 ms (5.0x), proyección
+  PA ~1.7-2.9 s. **Pendiente de confirmar en PA con JMeter (run p6).** El PDF por cliente
+  sigue en WeasyPrint. Antes de la migración: WeasyPrint 8-12 s en PA Developer (CPU-bound),
+  no cumplía el criterio #16 ≤ 5 s.
 - `setup_db.py` está en el repo (commit b6a33a5). Sin dependencias externas para reproducir el entorno.
 
 ---

@@ -222,3 +222,40 @@ recalcula vencimientos. Ejecutarlo en cada request de toda la app sería costoso
 El badge de alertas solo es relevante en el módulo de reportes.
 
 **[práctica observada, inferido del código]**
+
+---
+
+## D16 — Motor del PDF de zona: reportlab (no WeasyPrint)
+
+**Decisión:** El reporte por zona (`/reports/zona/<id>/pdf`) se genera con **reportlab**
+(Platypus) en `report_service.build_reporte_zona_pdf(datos)`, sin template HTML.
+El reporte por cliente sigue en WeasyPrint. Ambos motores conviven.
+
+**Razón:** El criterio de rendimiento de #16 exige PDF mean ≤ 5000 ms en PythonAnywhere
+Developer. El profiling con cProfile (#30) mostró que el render del reporte de zona era
+**98.5% WeasyPrint `write_pdf`** (motor de layout CSS, CPU-bound): 216k llamadas a
+`css/__missing__`, 376k a `check_math`. En PA Developer eso daba 8–13 s single-user;
+incluso aplanando todo el HTML (experimento H1b) no bajaba cómodo de 5 s. WeasyPrint es
+estructuralmente incapaz de cumplir C2 en ese hardware manteniendo el contenido requerido.
+
+reportlab usa layout imperativo (sin motor CSS): en la misma máquina y con la misma BD
+(zona 1, 50 equipos) el render bajó de **1228 ms → 244 ms (5.0x)**, proyectando ~1.7–2.9 s
+en PA. Además, al liberar rápido los 2-3 workers de PA, reduce la contención que degradaba
+el dashboard concurrente (causa raíz compartida documentada en current-state.md R6/#30).
+
+**Por qué desviarse del anteproyecto (WeasyPrint):** que la aplicación CUMPLA su criterio
+de calidad es un resultado más fuerte para la defensa que documentar un límite. Decisión
+tomada con el autor el 2026-06-01.
+
+**Alternativas descartadas:**
+- *Mantener WeasyPrint y documentar el límite:* no cumple C2; deja el criterio #16 abierto.
+- *Generación asíncrona (cola/worker):* PA Developer no ofrece workers de fondo en el plan;
+  añade infraestructura fuera del alcance de Sprint 5.
+
+**Impacto en código:**
+- `report_service.build_reporte_zona_pdf(datos)`: import reportlab lazy (igual que la regla
+  WeasyPrint en AGENTS.md), envuelto en `try/except → abort(503)` en la ruta.
+- Texto dinámico (clientes, componentes, series) escapado con `xml.sax.saxutils.escape`
+  antes de insertarlo en el markup de `Paragraph` (un `&` o `<` sin escapar rompe el parse).
+- Template `reports/pdf_zona.html` eliminado (huérfano).
+- `requirements.txt`: + `reportlab==4.5.1`. WeasyPrint permanece (lo usa el PDF de cliente).

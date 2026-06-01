@@ -10,7 +10,9 @@ from app.services.prediction_service import (
     calcular_vencimientos, get_equipos_criticos,
     URGENCIA_VENCIDO, URGENCIA_PROXIMO,
 )
-from app.services.report_service import get_reporte_zona, get_reporte_cliente
+from app.services.report_service import (
+    get_reporte_zona, get_reporte_cliente, build_reporte_zona_pdf,
+)
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -76,7 +78,6 @@ def criticos():
 @reports_bp.route("/zona/<int:zona_id>/pdf")
 @login_required
 def pdf_zona(zona_id):
-    from weasyprint import HTML
     from datetime import date as date_type
     fecha_str = request.args.get("fecha")
     try:
@@ -86,9 +87,8 @@ def pdf_zona(zona_id):
     datos = get_reporte_zona(zona_id, fecha=fecha)
     if not datos["zona"]:
         abort(404)
-    html = render_template("reports/pdf_zona.html", **datos)
     try:
-        pdf = HTML(string=html).write_pdf()
+        pdf = build_reporte_zona_pdf(datos)
     except Exception:
         abort(503)
     slug = datos["zona"].nombre.lower().replace(" ", "-")

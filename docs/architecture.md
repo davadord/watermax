@@ -260,17 +260,32 @@ Controla visibilidad de elementos de admin en templates sin necesidad de import.
 
 ## Generación de PDFs
 
-WeasyPrint 68.1 + GTK3.
+Dos motores según el reporte (ver `docs/decisions.md` D16):
 
-Templates PDF standalone (`reports/pdf_zona.html`, `reports/pdf_cliente.html`) con CSS inline.
-No heredan de `base.html` para evitar dependencias de estáticos externos.
+**Reporte por zona** (`/reports/zona/<id>/pdf`): **reportlab 4.5.1** (Platypus).
+`report_service.build_reporte_zona_pdf(datos)` arma los flowables y devuelve los
+bytes del PDF. Sin template HTML. Migrado de WeasyPrint en #30 porque el motor de
+layout CSS de WeasyPrint era CPU-bound y no alcanzaba el criterio JMeter (<=5 s en
+PA Developer); reportlab rinde ~5x más rápido en la misma máquina.
 
-WeasyPrint maneja paginación automática a partir del CSS de los templates.
+**Reporte por cliente** (`/reports/cliente/<id>/pdf`): **WeasyPrint 68.1 + GTK3**,
+template standalone `reports/pdf_cliente.html` con CSS inline (no hereda de
+`base.html`). WeasyPrint maneja paginación automática vía el CSS del template.
 
-Flujo en cada ruta PDF:
+Flujo de la ruta zona (reportlab):
+```python
+datos = get_reporte_zona(zona_id, fecha=fecha)
+try:
+    pdf = build_reporte_zona_pdf(datos)   # import reportlab lazy dentro
+except Exception:
+    abort(503)
+return Response(pdf, mimetype="application/pdf", ...)
+```
+
+Flujo de la ruta cliente (WeasyPrint):
 ```python
 from weasyprint import HTML          # import lazy
-html = render_template("...", **datos)
+html = render_template("reports/pdf_cliente.html", **datos)
 try:
     pdf = HTML(string=html).write_pdf()
 except Exception:
