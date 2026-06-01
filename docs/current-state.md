@@ -1,6 +1,6 @@
 # Estado actual del proyecto
 
-> Última actualización: 2026-05-14
+> Última actualización: 2026-06-01
 
 ---
 
@@ -14,7 +14,7 @@
 | S3 | #10 #11 #12 #23 #26 — Alertas críticas, dashboard global, motor refinado | Completado | 2026-05-14 |
 | S4 | #13 #14 #15 — report_service, PDFs WeasyPrint | Completado | 2026-05-14 |
 | Auditoría pre-S5 | Correcciones bloqueantes para PythonAnywhere | Completado | 2026-05-14 |
-| **S5** | #16 #17 #18 #19 #20 | **Pendiente** | due 2026-07-04 |
+| **S5** | #16 #17 #18 #19 #20 | **En curso** — #18 cerrado 2026-05-25 | due 2026-07-04 |
 
 ---
 
@@ -22,25 +22,23 @@
 
 ### Sprint 5 — milestone: "Sprint 5 - Calidad y Despliegue"
 
-| # | Título | MoSCoW | Estimación |
-|---|--------|--------|-----------|
-| #16 | Tests de rendimiento con JMeter | must-have | 8 h |
-| #17 | Evaluación de usabilidad SUS (≥68 puntos) | must-have | 8 h |
-| #18 | Despliegue en PythonAnywhere (plan Hacker) | must-have | 8 h |
-| #19 | Configuración de dominio .com | should-have | 4 h |
-| #20 | Documentación técnica final (ISO/IEC 25010) | must-have | 16 h |
+| # | Título | MoSCoW | Estimación | Estado |
+|---|--------|--------|-----------|--------|
+| #18 | Despliegue en PythonAnywhere (plan Developer) | must-have | 8 h | **Cerrado** 2026-05-25 |
+| #16 | Tests de rendimiento con JMeter | must-have | 8 h | **En progreso** — plan ejecutado, criterios pendientes (ver R6) |
+| #17 | Evaluación de usabilidad SUS (≥68 puntos) | must-have | 8 h | Abierto |
+| #19 | Configuración de dominio .com | should-have | 4 h | Abierto |
+| #20 | Documentación técnica final (ISO/IEC 25010) | must-have | 16 h | Abierto |
 
-**Orden lógico recomendado:** #18 → #27 → #16 → #17 → #19 → #20
+App desplegada en: https://dordonezm2.pythonanywhere.com/ (plan Developer)
 
-Razón del orden: el despliegue en PA (#18) desbloquea las pruebas con datos reales (#16, #17);
-el issue #27 (mysqlclient) puede bloquear al #18 durante su ejecución;
-la documentación (#20) requiere los resultados de JMeter y SUS.
+**Orden lógico restante:** #16 → #17 → #19 → #20
 
 ### Deuda técnica abierta (sin milestone)
 
 | # | Título | Origen | Bloquea |
 |---|--------|--------|---------|
-| #27 | Verificar instalación de mysqlclient en PythonAnywhere | Auditoría 2026-05-14 | #18 |
+| ~~#27~~ | ~~Verificar instalación de mysqlclient en PythonAnywhere~~ | Auditoría 2026-05-14 | **Cerrado** 2026-05-31 — mysqlclient 2.2.8 funciona sin cambios en PA |
 | #28 | Mejorar diseño páginas de error 404/500 | Auditoría 2026-05-14 | — |
 
 ---
@@ -105,13 +103,23 @@ con la instalación inicial donde el flujo correcto es `setup_db.py → flask db
 y obtenga errores. La documentación en `wsgi.py` debería aclarar que el paso 4 es solo
 para instalación inicial.
 
-### R5 — Dependencia operativa #18 → #27
+### ~~R5 — Dependencia operativa #18 → #27~~ — RESUELTO
 
-El issue #27 (mysqlclient en PA) no tiene milestone asignado, pero es un prerequisito
-funcional del issue #18 (despliegue PA). Si mysqlclient falla al compilar en Ubuntu,
-el despliegue se bloqueará sin un mensaje de error claro.
+#27 cerrado 2026-05-31: mysqlclient 2.2.8 funciona sin cambios en PA. #18 cerrado 2026-05-25.
 
-**Acción sugerida:** resolver #27 como primer paso del despliegue (#18), o antes.
+### R6 — get_equipos_criticos() ejecuta dos veces por request — BLOQUEANTE para #16
+
+Detectado mediante JMeter el 2026-06-01. El context_processor que dibuja el badge de
+alertas en navbar llama a `get_equipos_criticos()` en cada request de rutas `reports.*`,
+igual que las views que lo usan (dashboard, criticos). Con 2.000 equipos activos en PA:
+~20.000 queries por request → dashboard tarda ~60 s → timeout en JMeter.
+
+Resultados del run completo (PA, 2026-06-01):
+- `GET /reports/dashboard`: Average 59.566 ms, Error 100% (criterio: ≤ 2.000 ms)
+- `GET /reports/zona/1/pdf`: Average 55.611 ms, Error 100% (criterio: ≤ 5.000 ms)
+
+**Fix pendiente:** cachear resultado en `flask.g` dentro de `get_equipos_criticos()`.
+El context_processor reutilizará el valor ya calculado por la view en el mismo request.
 
 ---
 
@@ -120,8 +128,10 @@ el despliegue se bloqueará sin un mensaje de error claro.
 - Sin suite de tests automatizados. Criterios de aceptación validados manualmente.
 - `Mantenimiento.completado` siempre es `True` al crear — nunca se filtra en ninguna query. El campo existe pero no captura ningún estado real del negocio (no hay mantenimientos "en curso"). Dead weight hasta que se implemente ese flujo.
 - Motor predictivo se recalcula en cada request (sin caché). Aceptable para el volumen esperado.
-- `get_equipos_criticos()` se ejecuta en cada request autenticado de rutas `reports.*`
-  (para el badge de alertas en navbar). Sin optimización de caché entre requests.
+- `get_equipos_criticos()` se ejecuta **dos veces** por request en rutas `reports.*`:
+  una en la view (dashboard/criticos) y otra en el context_processor del badge de navbar.
+  Con 2.000 equipos activos genera ~20.000 queries por request. Medido en JMeter (#16):
+  dashboard tarda ~60 s en PA → criterio ≤ 2 s no cumplido. Pendiente cachear con `flask.g`.
 - PDFs generados síncronamente por WeasyPrint. Sin procesamiento asíncrono.
   Puede ser lento con reportes muy grandes.
 - `setup_db.py` está en el repo (commit b6a33a5). Sin dependencias externas para reproducir el entorno.
@@ -130,11 +140,11 @@ el despliegue se bloqueará sin un mensaje de error claro.
 
 ## Próximos pasos
 
-1. Iniciar Sprint 5 con `gh issue view 18` (despliegue PythonAnywhere).
-4. Durante el despliegue, resolver y cerrar #27 (mysqlclient).
-5. Con la app en PA: ejecutar pruebas JMeter (#16) y evaluación SUS (#17).
-6. Configurar dominio (#19) una vez que #18 esté resuelto.
-7. Redactar documentación ISO 25010 (#20) con resultados de #16 y #17.
+1. **#16 (bloqueante):** cachear `get_equipos_criticos()` en `flask.g`, re-correr JMeter
+   en modo no-GUI y verificar criterios ≤ 2 s (dashboard) y ≤ 5 s (PDF). Cerrar issue.
+2. **#17:** evaluación SUS con usuarios reales (≥ 68 puntos).
+3. **#19:** configurar dominio .com.
+4. **#20:** redactar documentación ISO 25010 con resultados de #16 y #17.
 
 ---
 
