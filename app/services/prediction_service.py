@@ -1,3 +1,5 @@
+import threading
+import time
 from collections import defaultdict
 from datetime import date, timedelta
 from statistics import mean
@@ -237,3 +239,57 @@ def get_equipos_criticos(zona_id=None, urgencia=None, with_detail=True):
     if cache is not None:
         cache[cache_key] = resultado
     return resultado
+
+
+# Caché cross-request del resumen global del dashboard. La caché request-scoped
+# (flask.g de get_equipos_criticos) no ayuda bajo carga: cada request rehidrata
+# los 2000 equipos, y 5 dashboards concurrentes sobre los pocos workers de PA
+# multiplicaban la latencia (era el cuello de C1). Aquí el panorama se calcula
+# una vez y se comparte entre requests.
+_RESUMEN_TTL_SEGUNDOS = 60
+_resumen_lock = threading.Lock()
+_resumen_estado = (None, 0.0)  # (resumen_dict, monotonic_ts); tupla inmutable -> swap atómico bajo GIL
+
+
+def invalidar_cache_resumen_global():
+    """
+    Invalida la caché del resumen global. Llamar tras escribir lo que cambia el
+    panorama (mantenimientos y equipos). La caché es POR PROCESO: en el modelo
+    multi-proceso de PythonAnywhere esta invalidación solo refresca el proceso que
+    atendió la escritura; el TTL corto acota el desfase en los demás procesos.
+    """
+    global _resumen_estado
+    _resumen_estado = (None, 0.0)
+
+
+def get_resumen_global(force_refresh=False):
+    """
+    Resumen global de equipos críticos para el dashboard (vista sin zona) y el
+    badge del navbar: {"vencidos", "proximos", "total"}.
+
+    Caché cross-request con TTL corto + invalidación en escritura. Se cachea el
+    resumen DERIVADO (enteros), no la lista de objetos ORM: estos quedarían
+    detached al cerrarse la sesión por request. El detalle (/criticos) se mantiene
+    live con get_equipos_criticos().
+
+    Lock single-flight: si la caché está fría/expirada y llegan varias requests a
+    la vez, solo una recomputa (~coste single-user) y las demás esperan ese único
+    cómputo, en vez de recomputar todas en paralelo (evita el cache stampede).
+    """
+    global _resumen_estado
+    if not force_refresh:
+        resumen, ts = _resumen_estado
+        if resumen is not None and (time.monotonic() - ts) < _RESUMEN_TTL_SEGUNDOS:
+            return resumen
+    with _resumen_lock:
+        resumen, ts = _resumen_estado
+        if not force_refresh and resumen is not None and (time.monotonic() - ts) < _RESUMEN_TTL_SEGUNDOS:
+            return resumen
+        criticos = get_equipos_criticos(with_detail=False)
+        resumen = {
+            "vencidos": sum(1 for i in criticos if i["urgencia_maxima"] == URGENCIA_VENCIDO),
+            "proximos": sum(1 for i in criticos if i["urgencia_maxima"] == URGENCIA_PROXIMO),
+            "total": len(criticos),
+        }
+        _resumen_estado = (resumen, time.monotonic())
+        return resumen

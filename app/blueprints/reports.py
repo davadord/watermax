@@ -7,7 +7,7 @@ from app import db
 from app.models.client import Zona
 from app.models.equipment import EquipoInstalado
 from app.services.prediction_service import (
-    calcular_vencimientos, get_equipos_criticos,
+    calcular_vencimientos, get_equipos_criticos, get_resumen_global,
     URGENCIA_VENCIDO, URGENCIA_PROXIMO,
 )
 from app.services.report_service import (
@@ -41,12 +41,7 @@ def dashboard():
             })
         mantenimientos_hoy.sort(key=lambda x: x["_sort"])
 
-    criticos_global = get_equipos_criticos(with_detail=False)
-    resumen_global = {
-        "vencidos": sum(1 for i in criticos_global if i["urgencia_maxima"] == URGENCIA_VENCIDO),
-        "proximos": sum(1 for i in criticos_global if i["urgencia_maxima"] == URGENCIA_PROXIMO),
-        "total": len(criticos_global),
-    }
+    resumen_global = get_resumen_global()
 
     return render_template(
         "reports/dashboard.html",

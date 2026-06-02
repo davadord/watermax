@@ -142,7 +142,11 @@ Optimización pendiente trasladada al issue #30:
 - Motor predictivo: `get_equipos_criticos()` itera 2.000 equipos en memoria por request.
   Tras optimizaciones del 2026-06-01 (commits `02073f7`, `463dfc1`, `7ca4fed`) ejecuta
   1 query SQL en lugar de ~20.000. Aceptable para volumen actual en PA Developer.
-  Pendiente: max p99 bajo 4-concurrent llega a 2.7 s (criterio #16 era ≤ 2 s). Ver #30.
+  El dashboard concurrente (max bajo 4-5 usuarios) llegaba a 2.7-3.9 s (criterio #16
+  C1 era ≤ 2 s). Resuelto con caché cross-request del resumen global (#30, D17):
+  el panorama se calcula una vez y se comparte (local: cold 194 ms → warm ~0 ms),
+  con TTL 60 s + invalidación en escritura + lock single-flight. **Pendiente de
+  confirmar C1 en PA con JMeter (run p7).**
 - PDF por zona migrado a reportlab (#30, D16): render local 1228→244 ms (5.0x), proyección
   PA ~1.7-2.9 s. **Pendiente de confirmar en PA con JMeter (run p6).** El PDF por cliente
   sigue en WeasyPrint. Antes de la migración: WeasyPrint 8-12 s en PA Developer (CPU-bound),

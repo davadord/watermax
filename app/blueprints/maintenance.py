@@ -9,7 +9,7 @@ from app.models.maintenance import Mantenimiento, DetalleMantenimiento
 from app.models.equipment import EquipoInstalado
 from app.models.client import Cliente
 from app.models.user import Usuario
-from app.services.prediction_service import calcular_proximo_componente
+from app.services.prediction_service import calcular_proximo_componente, invalidar_cache_resumen_global
 from app.utils.decorators import role_required
 
 maintenance_bp = Blueprint("maintenance", __name__)
@@ -68,6 +68,7 @@ def nuevo_mantenimiento(equipo_id):
             for d in detalles:
                 db.session.add(d)
             db.session.commit()
+            invalidar_cache_resumen_global()
             flash("Mantenimiento registrado correctamente.", "success")
             return redirect(url_for("maintenance.historial_equipo", equipo_id=equipo.id))
 
@@ -255,6 +256,7 @@ def editar_mantenimiento(mant_id):
                 db.session.add(d)
 
             db.session.commit()
+            invalidar_cache_resumen_global()
             flash("Mantenimiento actualizado correctamente.", "success")
             return redirect(url_for("maintenance.listado_mantenimientos"))
 
@@ -295,5 +297,6 @@ def anular_mantenimiento(mant_id):
 
     mant.motivo_anulacion = motivo
     db.session.commit()
+    invalidar_cache_resumen_global()
     flash("Mantenimiento anulado correctamente.", "success")
     return redirect(url_for("maintenance.listado_mantenimientos"))

@@ -7,6 +7,7 @@ from sqlalchemy import select, delete
 from app import db
 from app.models.client import Cliente, Zona, TIPOS_IDENTIFICADOR
 from app.models.equipment import TipoEquipo, Componente, TipoEquipoComponente, EquipoInstalado
+from app.services.prediction_service import invalidar_cache_resumen_global
 from app.utils.decorators import role_required
 
 admin_bp = Blueprint("admin", __name__)
@@ -459,6 +460,7 @@ def nuevo_equipo():
         )
         db.session.add(equipo)
         db.session.commit()
+        invalidar_cache_resumen_global()
         flash("Equipo registrado.", "success")
         return redirect(url_for("admin.equipos"))
     return render_template("admin/equipo_form.html",
@@ -505,6 +507,7 @@ def editar_equipo(id):
         equipo.numero_serie = request.form.get("numero_serie")
         equipo.fecha_instalacion = fecha_instalacion
         db.session.commit()
+        invalidar_cache_resumen_global()
         flash("Equipo actualizado.", "success")
         return redirect(url_for("admin.equipos"))
     return render_template("admin/equipo_form.html",
@@ -529,6 +532,7 @@ def eliminar_equipo(id):
         db.session.delete(equipo)
         db.session.commit()
         flash("Equipo eliminado.", "success")
+    invalidar_cache_resumen_global()
     return redirect(url_for("admin.equipos"))
 
 
@@ -543,5 +547,6 @@ def reactivar_equipo(id):
     equipo.activo = True
     equipo.fecha_reactivacion = date.today()
     db.session.commit()
+    invalidar_cache_resumen_global()
     flash(f"Equipo {equipo.numero_serie or equipo.tipo_equipo.nombre} reactivado. El motor predictivo usará esta fecha como punto de partida.", "success")
     return redirect(url_for("admin.equipos"))

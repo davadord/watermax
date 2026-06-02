@@ -259,3 +259,66 @@ tomada con el autor el 2026-06-01.
   antes de insertarlo en el markup de `Paragraph` (un `&` o `<` sin escapar rompe el parse).
 - Template `reports/pdf_zona.html` eliminado (huérfano).
 - `requirements.txt`: + `reportlab==4.5.1`. WeasyPrint permanece (lo usa el PDF de cliente).
+
+---
+
+## D17 — Caché cross-request del resumen global del dashboard
+
+**Decisión:** El resumen global de equipos críticos del dashboard (vista sin zona)
+y el badge de alertas del navbar se sirven desde una caché **cross-request** en
+`prediction_service.get_resumen_global()` → `{"vencidos", "proximos", "total"}`,
+con **TTL corto (60 s)** + **invalidación al escribir** mantenimientos y equipos,
+y un **lock single-flight** ante caché fría/expirada.
+
+**Razón:** El criterio de rendimiento de #16 (C1) exige el dashboard ≤ 2000 ms
+con 4-5 usuarios concurrentes en PA Developer. Con los runs p6/p6b se descartó por
+datos la hipótesis de causa raíz compartida con el PDF: con el PDF ya rápido el
+dashboard seguía fallando (max 3893/3073 ms). La causa real: **cada request
+rehidrataba los 2000 equipos y recalculaba vencimientos** (~200 ms single-thread),
+y 5 dashboards concurrentes recomputando lo mismo sobre los 2-3 workers de PA
+multiplicaban la latencia (201 → 2748 ms en p4). El trabajo era **redundante**:
+todas las requests calculan el MISMO panorama. Calcularlo una vez y compartirlo
+elimina esa contención (medición local: cold 194 ms → warm ~0 ms).
+
+**Por qué se cachea el resumen derivado (enteros) y no la lista de objetos ORM:**
+los `EquipoInstalado` quedan *detached* al cerrarse la sesión por request; servirlos
+desde una caché cross-request arriesga `DetachedInstanceError` (al leer una relación
+no precargada) y datos stale. El dashboard sin zona y el navbar solo consumen 3
+conteos, así que se cachea solo eso (plain data, sin riesgo de sesión). El detalle
+`/reports/criticos` se mantiene **live** con `get_equipos_criticos()` (su caché
+request-scoped en `flask.g`), porque sí muestra los objetos ORM completos.
+
+**Coherencia (TTL + invalidación):** la caché es **por proceso**. En el modelo
+multi-proceso de PA, la invalidación explícita solo refresca el proceso que atendió
+la escritura; el **TTL corto acota el desfase** en los demás. Una caché compartida
+(Redis) daría invalidación global pero está fuera del alcance del plan Developer
+(trade-off deliberado). El dashboard es un **panorama**, no tiempo real.
+Invalidación instrumentada en: `maintenance` (nuevo/editar/anular mantenimiento) y
+`admin` equipos (nuevo/editar/eliminar/reactivar). Cambios de configuración raros
+(intervalo de componente, composición de tipo de equipo) no se instrumentan: los
+cubre el TTL.
+
+**Cache stampede:** `threading.Lock` con double-check. Si la caché está fría o el
+TTL expira y llegan varias requests a la vez, **solo una recomputa** (~coste
+single-user, < 2 s) y las demás esperan ese único cómputo, en vez de recomputar
+todas en paralelo. El estado se guarda como tupla inmutable `(resumen, ts)`
+reasignada atómicamente bajo el GIL, así el fast-path (caché warm) no toma el lock.
+
+**Alternativas descartadas:**
+- *Cachear la lista cruda de `get_equipos_criticos()`:* objetos ORM detached →
+  riesgo de `DetachedInstanceError` y stale. El resumen derivado lo evita.
+- *Subir el plan de PA (más workers/CPU):* la app cumpliría por hardware, no por
+  diseño. Cachear es un resultado de ingeniería más fuerte para la defensa.
+- *Generación/recálculo asíncrono (cola/worker):* PA Developer no ofrece workers de
+  fondo; fuera de alcance de Sprint 5.
+
+**Evidencia local (bench, 2000 equipos):** cold 194 ms → warm ~0 ms; 5 hilos
+concurrentes contra caché vacía → 1 sola recomputación (single-flight). **Pendiente
+de confirmar C1 en PA con JMeter (run p7)** — igual que D16 se confirmó en p6.
+
+**Impacto en código:**
+- `prediction_service.py`: `get_resumen_global()`, `invalidar_cache_resumen_global()`,
+  `_RESUMEN_TTL_SEGUNDOS`, `_resumen_lock`, `_resumen_estado` (stdlib `threading`/`time`).
+- `reports.dashboard()` usa `get_resumen_global()`; `app/__init__.inject_globals()`
+  lee `get_resumen_global()["vencidos"]` para el badge.
+- Invalidación en los 7 sitios de escritura de `maintenance.py` y `admin.py`.
