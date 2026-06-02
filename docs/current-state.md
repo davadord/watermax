@@ -14,7 +14,7 @@
 | S3 | #10 #11 #12 #23 #26 — Alertas críticas, dashboard global, motor refinado | Completado | 2026-05-14 |
 | S4 | #13 #14 #15 — report_service, PDFs WeasyPrint | Completado | 2026-05-14 |
 | Auditoría pre-S5 | Correcciones bloqueantes para PythonAnywhere | Completado | 2026-05-14 |
-| **S5** | #16 #17 #18 #19 #20 #29 | **En curso** — #18 cerrado 2026-05-25, #29 cerrado 2026-05-31 | due 2026-07-04 |
+| **S5** | #16 #17 #18 #19 #20 #29 | **En curso** — #18 (25-05), #29 (31-05), #16 (01-06) cerrados | due 2026-07-04 |
 
 ---
 
@@ -26,14 +26,14 @@
 |---|--------|--------|-----------|--------|
 | #18 | Despliegue en PythonAnywhere (plan Developer) | must-have | 8 h | **Cerrado** 2026-05-25 |
 | #29 | Listado, edición y anulación de mantenimientos | must-have | 12 h | **Cerrado** 2026-05-31 |
-| #16 | Tests de rendimiento con JMeter | must-have | 8 h | **En progreso** — 3 optimizaciones aplicadas (29x dashboard, 6x PDF). PDF y dashboard concurrente quedan en #30 |
+| #16 | Tests de rendimiento con JMeter | must-have | 8 h | **Cerrado** 2026-06-01 — 5/5 criterios cumplen en PA (p7/p7b). Dashboard y PDF resueltos vía #30 |
 | #17 | Evaluación de usabilidad SUS (≥68 puntos) | must-have | 8 h | Abierto |
 | #19 | Configuración de dominio .com | should-have | 4 h | Abierto |
 | #20 | Documentación técnica final (ISO/IEC 25010) | must-have | 16 h | Abierto |
 
 App desplegada en: https://dordonezm2.pythonanywhere.com/ (plan Developer)
 
-**Orden lógico restante:** #16 → #17 → #19 → #20
+**Orden lógico restante:** #17 → #19 → #20
 
 ### Deuda técnica abierta (sin milestone)
 
@@ -41,7 +41,7 @@ App desplegada en: https://dordonezm2.pythonanywhere.com/ (plan Developer)
 |---|--------|--------|---------|
 | ~~#27~~ | ~~Verificar instalación de mysqlclient en PythonAnywhere~~ | Auditoría 2026-05-14 | **Cerrado** 2026-05-31 — mysqlclient 2.2.8 funciona sin cambios en PA |
 | #28 | Mejorar diseño páginas de error 404/500 | Auditoría 2026-05-14 | — |
-| #30 | Optimizar dashboard bajo carga y generación PDF en PA | JMeter p4 (2026-06-01) | Cierre completo de #16 |
+| ~~#30~~ | ~~Optimizar dashboard bajo carga y generación PDF en PA~~ | JMeter p4 (2026-06-01) | **Cerrado** 2026-06-01 — C1 y C2 cumplen en PA (p7/p7b). D16 reportlab + D17 caché resumen global |
 
 ---
 
@@ -145,25 +145,23 @@ Optimización pendiente trasladada al issue #30:
   El dashboard concurrente (max bajo 4-5 usuarios) llegaba a 2.7-3.9 s (criterio #16
   C1 era ≤ 2 s). Resuelto con caché cross-request del resumen global (#30, D17):
   el panorama se calcula una vez y se comparte (local: cold 194 ms → warm ~0 ms),
-  con TTL 60 s + invalidación en escritura + lock single-flight. **Pendiente de
-  confirmar C1 en PA con JMeter (run p7).**
-- PDF por zona migrado a reportlab (#30, D16): render local 1228→244 ms (5.0x), proyección
-  PA ~1.7-2.9 s. **Pendiente de confirmar en PA con JMeter (run p6).** El PDF por cliente
-  sigue en WeasyPrint. Antes de la migración: WeasyPrint 8-12 s en PA Developer (CPU-bound),
-  no cumplía el criterio #16 ≤ 5 s.
+  con TTL 60 s + invalidación en escritura + lock single-flight. **Confirmado en PA:
+  JMeter p7/p7b → dashboard max 1.460/456 ms, 0 fallos de assertion.**
+- PDF por zona migrado a reportlab (#30, D16): render local 1228→244 ms (5.0x).
+  **Confirmado en PA (p6→p7): 8.845 → 1.353 ms mean, consistente < 5 s.** El PDF por
+  cliente sigue en WeasyPrint. Antes de la migración: WeasyPrint 8-12 s en PA Developer
+  (CPU-bound), no cumplía el criterio #16 ≤ 5 s.
 - `setup_db.py` está en el repo (commit b6a33a5). Sin dependencias externas para reproducir el entorno.
 
 ---
 
 ## Próximos pasos
 
-1. **#16:** decisión de cierre pendiente — pasan criterios 1, 4 y 5; criterio 2 (dashboard)
-   cumple en mediana pero no en p99 bajo carga; criterio 3 (PDF) no cumple. Trabajo
-   restante movido a #30. Sesión cerrada el 2026-06-01 sin cerrar #16.
-2. **#30:** profilar y optimizar dashboard concurrente + PDF.
-3. **#17:** evaluación SUS con usuarios reales (≥ 68 puntos).
-4. **#19:** configurar dominio .com.
-5. **#20:** redactar documentación ISO 25010 con resultados de #16 y #17.
+1. ~~**#16** y **#30**~~ — **Cerrados 2026-06-01.** C1 y C2 cumplen en PA (JMeter p7/p7b);
+   D16 (reportlab) + D17 (caché resumen global).
+2. **#17:** evaluación SUS con usuarios reales (≥ 68 puntos).
+3. **#19:** configurar dominio .com.
+4. **#20:** redactar documentación ISO 25010 con resultados de #16 y #17.
 
 ---
 
