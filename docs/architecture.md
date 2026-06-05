@@ -51,6 +51,12 @@ Secuencia de inicialización:
 - `alertas_count`: número de equipos con urgencia `vencido`. Se calcula llamando a
   `get_equipos_criticos()` **solo** cuando `request.endpoint` empieza con `"reports."`.
   En todas las demás rutas, vale `0` sin ejecutar la query.
+  `get_equipos_criticos()` se cachea en `flask.g` para no ejecutarse más de una vez por request.
+
+**Caché cross-request del resumen global (`prediction_service.py`):**
+`get_resumen_global()` almacena el panorama en `app._resumen_cache` con TTL 60 s y
+lock single-flight (un solo hilo calcula; los demás esperan y reutilizan el resultado).
+Se invalida en escritura: al guardar, editar o anular un mantenimiento.
 
 ---
 
@@ -76,9 +82,13 @@ hasta `bloqueado_hasta` (datetime) si supera el umbral.
 
 ### `/admin` — `app/blueprints/admin.py`
 
-CRUD completo para: `Zona`, `Cliente`, `TipoEquipo`, `Componente`, `EquipoInstalado`.
+CRUD completo para: `Zona`, `Cliente`, `TipoEquipo`, `Componente`, `EquipoInstalado`, `Usuario`.
 
 Rutas de escritura protegidas con `@login_required` + `@role_required("propietario", "administrativo")`.
+
+**Gestión de usuarios:** listado, creación, edición y desactivación (soft delete — `activo=False`).
+Regla de negocio: solo `propietario` puede crear/editar usuarios con rol `propietario`.
+Un usuario no puede desactivarse a sí mismo.
 
 Flujo guiado equipo desde cliente: al crear un equipo, la URL puede incluir `?cliente_id=X`.
 El formulario muestra el cliente como texto fijo con `<input hidden>`. Sin parámetro, muestra
@@ -90,6 +100,9 @@ Rutas:
 - `GET/POST /maintenance/nuevo/<equipo_id>` — registro de mantenimiento
 - `GET /maintenance/equipo/<id>` — historial por equipo (paginado, 20/página)
 - `GET /maintenance/cliente/<id>` — historial agrupado por equipo
+- `GET /maintenance/` — listado global de mantenimientos (filtros por cliente y fechas; solo admin)
+- `GET/POST /maintenance/<id>/editar` — edición completa con recálculo del motor predictivo
+- `POST /maintenance/<id>/anular` — anulación con motivo (soft delete: `anulado=True`; excluido del motor y de PDFs)
 
 **Transacción atómica en nuevo mantenimiento:**
 1. `db.session.add(mant)` + `db.session.flush()` (obtiene `mant.id` sin commitear).

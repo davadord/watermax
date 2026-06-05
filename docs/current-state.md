@@ -1,6 +1,6 @@
 # Estado actual del proyecto
 
-> Última actualización: 2026-06-01
+> Última actualización: 2026-06-05
 
 ---
 
@@ -14,7 +14,7 @@
 | S3 | #10 #11 #12 #23 #26 — Alertas críticas, dashboard global, motor refinado | Completado | 2026-05-14 |
 | S4 | #13 #14 #15 — report_service, PDFs WeasyPrint | Completado | 2026-05-14 |
 | Auditoría pre-S5 | Correcciones bloqueantes para PythonAnywhere | Completado | 2026-05-14 |
-| **S5** | #16 #17 #18 #19 #20 #29 | **En curso** — #18 (25-05), #29 (31-05), #16 (01-06) cerrados | due 2026-07-04 |
+| **S5** | #16 #17 #18 #19 #20 #29 #31 #32 | **En curso** — #18 (25-05), #29 (31-05), #16+#30 (01-06), #31 (02-06), #32 (05-06) cerrados | due 2026-07-04 |
 
 ---
 
@@ -27,6 +27,8 @@
 | #18 | Despliegue en PythonAnywhere (plan Developer) | must-have | 8 h | **Cerrado** 2026-05-25 |
 | #29 | Listado, edición y anulación de mantenimientos | must-have | 12 h | **Cerrado** 2026-05-31 |
 | #16 | Tests de rendimiento con JMeter | must-have | 8 h | **Cerrado** 2026-06-01 — 5/5 criterios cumplen en PA (p7/p7b). Dashboard y PDF resueltos vía #30 |
+| #31 | Suite de pruebas unitarias — motor predictivo + modelo Usuario | must-have | 6 h | **Cerrado** 2026-06-02 — 34 pruebas pytest |
+| #32 | Suite de pruebas unitarias — CRUD gestión usuarios | must-have | 4 h | **Cerrado** 2026-06-05 — 17 pruebas pytest (51 total) |
 | #17 | Evaluación de usabilidad SUS (≥68 puntos) | must-have | 8 h | Abierto |
 | #19 | Configuración de dominio .com | should-have | 4 h | Abierto |
 | #20 | Documentación técnica final (ISO/IEC 25010) | must-have | 16 h | Abierto |
@@ -51,6 +53,7 @@ Funcionalidad completamente implementada y funcionando en desarrollo:
 
 - Autenticación: login/logout con bloqueo por intentos fallidos
 - CRUD completo: clientes, zonas, equipos instalados, tipos de equipo, componentes
+- Gestión de usuarios: alta, edición y desactivación con control de roles (propietario no editable por administrativo)
 - Registro de mantenimientos (transacción atómica, motor predictivo integrado al guardar)
 - Motor predictivo: proyección de vencimientos por componente, algoritmo histórico/nominal
 - Dashboard global: resumen de vencidos/próximos, filtro por zona
@@ -70,10 +73,10 @@ Funcionalidad completamente implementada y funcionando en desarrollo:
 
 | Ref | Descripción | Severidad | Estado |
 |-----|-------------|-----------|--------|
-| #27 | `mysqlclient` puede fallar al compilar en Ubuntu. Alternativa: PyMySQL puro-Python | Bloqueante para deploy | Issue abierto |
+| ~~#27~~ | ~~`mysqlclient` puede fallar al compilar en Ubuntu~~ | Bloqueante para deploy | **Cerrado** 2026-05-31 — mysqlclient 2.2.8 funciona sin cambios en PA |
 | #28 | Templates 404/500 son mínimas (solo texto básico) | Cosmético | Issue abierto |
 | — | `setup_db.py` versionado en el repo (commit b6a33a5) con SQLAlchemy 2.0 + stamp head | Resuelto | — |
-| — | No hay suite de tests automatizados | Deuda S5 | Cubierto por #16/#17 |
+| — | Suite de tests: 51 pruebas unitarias (pytest) — motor predictivo + CRUD usuarios | Resuelto | #31 + #32 cerrados |
 
 ---
 
