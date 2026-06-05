@@ -71,4 +71,4 @@ app/
 | S2 | may 2026 | #21 #22 #7 #8 #9 #25 — Registro mantenimientos, motor predictivo | Completado |
 | S3 | may 2026 | #10 #11 #12 #23 #26 — Alertas críticas, dashboard global, motor refinado | Completado |
 | S4 | may 2026 | #13 #14 #15 — report_service.py, reportes PDF | Completado |
-| S5 | may–jul 2026 | #18 (deploy), #29 (listado mantenimientos), #16+#30 (perf), #31 (tests), #32 (usuarios) — cerrados. #17 (SUS) en curso | **En curso** |
+| S5 | may–jul 2026 | #18 #29 #16+#30 #31 #32 — cerrados. #17 (SUS), #19 (dominio), #20 (docs ISO) — pendientes | **En curso** |

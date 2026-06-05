@@ -239,9 +239,11 @@ incluso aplanando todo el HTML (experimento H1b) no bajaba cómodo de 5 s. Weasy
 estructuralmente incapaz de cumplir C2 en ese hardware manteniendo el contenido requerido.
 
 reportlab usa layout imperativo (sin motor CSS): en la misma máquina y con la misma BD
-(zona 1, 50 equipos) el render bajó de **1228 ms → 244 ms (5.0x)**, proyectando ~1.7–2.9 s
-en PA. Además, al liberar rápido los 2-3 workers de PA, reduce la contención que degradaba
-el dashboard concurrente (causa raíz compartida documentada en current-state.md R6/#30).
+(zona 1, 50 equipos) el render bajó de **1228 ms → 244 ms (5.0x)**.
+**Confirmado en PA: JMeter p6 → mean 1.353 ms (de 8.845 ms). C2 cumple (criterio ≤ 5000 ms).
+Issue #16 cerrado 2026-06-01.** Al liberar rápido los 2-3 workers de PA, reduce también la
+contención que degradaba el dashboard concurrente (causa raíz compartida documentada en
+current-state.md R6/#30).
 
 **Por qué desviarse del anteproyecto (WeasyPrint):** que la aplicación CUMPLA su criterio
 de calidad es un resultado más fuerte para la defensa que documentar un límite. Decisión
@@ -313,8 +315,9 @@ reasignada atómicamente bajo el GIL, así el fast-path (caché warm) no toma el
   fondo; fuera de alcance de Sprint 5.
 
 **Evidencia local (bench, 2000 equipos):** cold 194 ms → warm ~0 ms; 5 hilos
-concurrentes contra caché vacía → 1 sola recomputación (single-flight). **Pendiente
-de confirmar C1 en PA con JMeter (run p7)** — igual que D16 se confirmó en p6.
+concurrentes contra caché vacía → 1 sola recomputación (single-flight).
+**Confirmado en PA: JMeter p7/p7b → dashboard max 1.460/456 ms, 0 fallos de assertion.
+C1 cumple (criterio ≤ 2000 ms). Issue #16 cerrado 2026-06-01.**
 
 **Impacto en código:**
 - `prediction_service.py`: `get_resumen_global()`, `invalidar_cache_resumen_global()`,
