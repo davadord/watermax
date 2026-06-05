@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state %}
+{% block title %}Usuarios — Watermax{% endblock %}
+{% block content %}
+
+{% call page_header(
+    "Usuarios",
+    subtitle="Cuentas con acceso al sistema y su rol asignado.",
+    icon="person-badge") %}
+  <a href="{{ url_for('admin.nuevo_usuario') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Nuevo usuario
+  </a>
+{% endcall %}
+
+{% set rol_badge = {'propietario': 'danger', 'administrativo': 'warning', 'tecnico': 'info'} %}
+
+{% if not usuarios %}
+  <div class="wm-table-card">
+    {{ empty_state(
+       title="Aún no hay usuarios",
+       message="Registra el primer usuario para darle acceso al sistema.",
+       icon="people",
+       action_label="Nuevo usuario",
+       action_url=url_for('admin.nuevo_usuario')) }}
+  </div>
+{% else %}
+<div class="wm-table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th class="actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for usuario in usuarios %}
+        <tr>
+          <td><strong>{{ usuario.nombre }}</strong></td>
+          <td class="wm-mono">{{ usuario.email }}</td>
+          <td>
+            <span class="badge bg-{{ rol_badge.get(usuario.rol, 'secondary') }}">{{ usuario.rol|capitalize }}</span>
+          </td>
+          <td>
+            {% if usuario.activo %}
+              <span class="badge bg-success">Activo</span>
+            {% else %}
+              <span class="badge bg-secondary">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            {% if usuario.id == current_user.id %}
+              <span class="text-muted small">Tu cuenta</span>
+            {% else %}
+              <a href="{{ url_for('admin.editar_usuario', id=usuario.id) }}"
+                 class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-pencil"></i> Editar
+              </a>
+              <form method="POST" action="{{ url_for('admin.eliminar_usuario', id=usuario.id) }}"
+                    class="d-inline"
+                    data-confirm="¿Desactivar a {{ usuario.nombre }}?"
+                    data-confirm-detail="El usuario perderá el acceso. Su historial de mantenimientos se conserva."
+                    data-confirm-action="Sí, desactivar"
+                    data-confirm-variant="danger">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                  <i class="bi bi-trash"></i> Eliminar
+                </button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header, field_value, field_selected %}
+{% block title %}{% if usuario %}Editar usuario{% else %}Nuevo usuario{% endif %} — Watermax{% endblock %}
+{% block content %}
+
+{% call page_header(
+    (usuario and "Editar usuario") or "Nuevo usuario",
+    subtitle=(usuario and usuario.nombre) or "Crea una cuenta de acceso al sistema.",
+    icon="person-badge",
+    breadcrumb=[("Usuarios", url_for('admin.listar_usuarios')),
+                ((usuario and "Editar") or "Nuevo", None)]) %}
+{% endcall %}
+
+<div class="row">
+  <div class="col-lg-8">
+    <form method="POST" class="wm-form-card" novalidate data-autofocus>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <h2 class="h6 text-uppercase text-muted mb-3">Datos de la cuenta</h2>
+      <div class="mb-3">
+        <label class="form-label required" for="nombre">Nombre completo</label>
+        <input type="text" id="nombre" name="nombre" class="form-control"
+               value="{{ field_value('nombre', usuario.nombre if usuario else '') }}"
+               required aria-required="true" maxlength="100" autocomplete="off"
+               placeholder="Ej. María González">
+      </div>
+
+      <div class="wm-form-grid">
+        <div>
+          <label class="form-label required" for="email">Correo electrónico</label>
+          <input type="email" id="email" name="email" class="form-control wm-mono"
+                 value="{{ field_value('email', usuario.email if usuario else '') }}"
+                 required aria-required="true" maxlength="120" autocomplete="off"
+                 placeholder="usuario@dominio.com">
+        </div>
+        <div>
+          <label class="form-label required" for="rol">Rol</label>
+          <select name="rol" id="rol" class="form-select" required aria-required="true">
+            <option value="">Seleccionar…</option>
+            {% for r in roles %}
+            <option value="{{ r }}" {{ field_selected('rol', r, usuario.rol if usuario else None) }}>{{ r|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <hr>
+      <h2 class="h6 text-uppercase text-muted mb-3">Contraseña</h2>
+      <div class="wm-form-grid">
+        <div>
+          <label class="form-label {% if not usuario %}required{% endif %}" for="password">Contraseña</label>
+          <input type="password" id="password" name="password" class="form-control"
+                 {% if not usuario %}required aria-required="true"{% endif %}
+                 autocomplete="new-password">
+          {% if usuario %}
+          <div class="form-text">Dejar en blanco para no cambiar la contraseña actual.</div>
+          {% endif %}
+        </div>
+        <div>
+          <label class="form-label {% if not usuario %}required{% endif %}" for="confirmar">Confirmar contraseña</label>
+          <input type="password" id="confirmar" name="confirmar" class="form-control"
+                 {% if not usuario %}required aria-required="true"{% endif %}
+                 autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="wm-form-actions">
+        <button type="submit" class="btn btn-primary"
+                data-loading-text="{{ 'Guardando…' if usuario else 'Creando…' }}">
+          <i class="bi bi-check-lg" aria-hidden="true"></i> {{ "Guardar cambios" if usuario else "Crear usuario" }}
+        </button>
+        <a href="{{ url_for('admin.listar_usuarios') }}" class="btn btn-light">Cancelar</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card bg-light border-0">
+      <div class="card-body small text-muted">
+        <h3 class="h6 text-dark"><i class="bi bi-info-circle"></i> Sobre los roles</h3>
+        <ul class="ps-3 mb-0">
+          <li><strong>Propietario:</strong> acceso total, incluida la gestión de usuarios.</li>
+          <li><strong>Administrativo:</strong> gestiona clientes, equipos y mantenimientos.</li>
+          <li><strong>Técnico:</strong> registra mantenimientos en campo.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

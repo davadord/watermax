@@ -75,6 +75,14 @@
               <i class="bi bi-puzzle me-1"></i> Componentes</a></li>
           </ul>
         </li>
+        {% if current_user.rol == 'propietario' %}
+        <li class="nav-item">
+          <a class="nav-link {% if ep in ('admin.listar_usuarios', 'admin.nuevo_usuario', 'admin.editar_usuario') %}active{% endif %}"
+             href="{{ url_for('admin.listar_usuarios') }}">
+            <i class="bi bi-person-badge"></i> Usuarios
+          </a>
+        </li>
+        {% endif %}
         {% endif %}
       </ul>
 

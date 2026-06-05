@@ -1,18 +1,21 @@
 from datetime import date, datetime
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from sqlalchemy import select, delete
 
 from app import db
 from app.models.client import Cliente, Zona, TIPOS_IDENTIFICADOR
 from app.models.equipment import TipoEquipo, Componente, TipoEquipoComponente, EquipoInstalado
+from app.models.user import Usuario
 from app.services.prediction_service import invalidar_cache_resumen_global
 from app.utils.decorators import role_required
 
 admin_bp = Blueprint("admin", __name__)
 
 _admin_roles = ("propietario", "administrativo")
+_solo_propietario = ("propietario",)
+ROLES_USUARIO = ("propietario", "administrativo", "tecnico")
 
 
 # ── Clientes ──────────────────────────────────────────────────────────────────
@@ -550,3 +553,107 @@ def reactivar_equipo(id):
     invalidar_cache_resumen_global()
     flash(f"Equipo {equipo.numero_serie or equipo.tipo_equipo.nombre} reactivado. El motor predictivo usará esta fecha como punto de partida.", "success")
     return redirect(url_for("admin.equipos"))
+
+
+# ── Usuarios ──────────────────────────────────────────────────────────────────
+
+@admin_bp.route("/usuarios")
+@login_required
+@role_required(*_solo_propietario)
+def listar_usuarios():
+    usuarios = db.session.execute(
+        select(Usuario).where(Usuario.activo == True).order_by(Usuario.nombre)
+    ).scalars().all()
+    return render_template("admin/usuarios.html", usuarios=usuarios)
+
+
+@admin_bp.route("/usuarios/nuevo", methods=["GET", "POST"])
+@login_required
+@role_required(*_solo_propietario)
+def nuevo_usuario():
+    if request.method == "POST":
+        error = _validar_usuario(request.form, exclude_id=None, es_creacion=True)
+        if error:
+            flash(error, "danger")
+            return render_template("admin/usuario_form.html", usuario=None, roles=ROLES_USUARIO)
+        usuario = Usuario(
+            nombre=request.form["nombre"].strip(),
+            email=request.form["email"].strip(),
+            rol=request.form["rol"],
+        )
+        usuario.set_password(request.form["password"])
+        db.session.add(usuario)
+        db.session.commit()
+        flash(f"Usuario {usuario.nombre} creado.", "success")
+        return redirect(url_for("admin.listar_usuarios"))
+    return render_template("admin/usuario_form.html", usuario=None, roles=ROLES_USUARIO)
+
+
+@admin_bp.route("/usuarios/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+@role_required(*_solo_propietario)
+def editar_usuario(id):
+    usuario = db.session.get(Usuario, id)
+    if not usuario or not usuario.activo:
+        flash("Usuario no encontrado.", "danger")
+        return redirect(url_for("admin.listar_usuarios"))
+    if request.method == "POST":
+        error = _validar_usuario(request.form, exclude_id=usuario.id, es_creacion=False)
+        if error:
+            flash(error, "danger")
+            return render_template("admin/usuario_form.html", usuario=usuario, roles=ROLES_USUARIO)
+        usuario.nombre = request.form["nombre"].strip()
+        usuario.email = request.form["email"].strip()
+        usuario.rol = request.form["rol"]
+        password = request.form.get("password", "")
+        if password:
+            usuario.set_password(password)
+            usuario.intentos_fallidos = 0
+            usuario.bloqueado_hasta = None
+        db.session.commit()
+        flash(f"Usuario {usuario.nombre} actualizado.", "success")
+        return redirect(url_for("admin.listar_usuarios"))
+    return render_template("admin/usuario_form.html", usuario=usuario, roles=ROLES_USUARIO)
+
+
+@admin_bp.route("/usuarios/<int:id>/eliminar", methods=["POST"])
+@login_required
+@role_required(*_solo_propietario)
+def eliminar_usuario(id):
+    usuario = db.session.get(Usuario, id)
+    if not usuario or not usuario.activo:
+        flash("Usuario no encontrado.", "danger")
+        return redirect(url_for("admin.listar_usuarios"))
+    if usuario.id == current_user.id:
+        flash("No puedes desactivar tu propia cuenta.", "danger")
+        return redirect(url_for("admin.listar_usuarios"))
+    usuario.activo = False
+    db.session.commit()
+    flash(f"Usuario {usuario.nombre} desactivado.", "success")
+    return redirect(url_for("admin.listar_usuarios"))
+
+
+def _validar_usuario(form, exclude_id, es_creacion):
+    nombre = form.get("nombre", "").strip()
+    email = form.get("email", "").strip()
+    rol = form.get("rol", "")
+    password = form.get("password", "")
+    confirmar = form.get("confirmar", "")
+    if not nombre:
+        return "El nombre es obligatorio."
+    if not email:
+        return "El correo electrónico es obligatorio."
+    if "@" not in email or "." not in email.partition("@")[2]:
+        return "El correo electrónico no tiene un formato válido."
+    if rol not in ROLES_USUARIO:
+        return "Selecciona un rol válido."
+    stmt = select(Usuario).where(Usuario.email == email)
+    if exclude_id:
+        stmt = stmt.where(Usuario.id != exclude_id)
+    if db.session.execute(stmt).scalars().first():
+        return f"Ya existe un usuario con el correo {email}."
+    if es_creacion and not password:
+        return "La contraseña es obligatoria."
+    if password and password != confirmar:
+        return "Las contraseñas no coinciden."
+    return None
