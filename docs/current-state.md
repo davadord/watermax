@@ -92,14 +92,13 @@ El impedimento documentado en el daily de auditoría fue resuelto en ese mismo c
 
 Sprint 4 corregido a "Completado" en `README.md`.
 
-### R3 — CLAUDE.md no versionado
+### R3 — Configuración local no versionada
 
-`CLAUDE.md` (instrucciones operativas para Claude Code) está en `.gitignore`.
-Agentes que clonen el repo desde cero no tendrán ese archivo.
+Los archivos de configuración de entorno de desarrollo están en `.gitignore`.
 `AGENTS.md` y `docs/` son la única fuente de contexto persistente versionada en git.
 
-**Consecuencia:** si las reglas de `CLAUDE.md` cambian, deben reflejarse también en
-`AGENTS.md` para que no se pierdan.
+**Consecuencia:** cualquier regla operativa local debe reflejarse en `AGENTS.md`
+para que no se pierda al clonar el repositorio.
 
 ### R4 — wsgi.py: instrucciones de instalación inicial vs flask db upgrade
 

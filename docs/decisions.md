@@ -174,13 +174,13 @@ cliente y quiere agregar un equipo. Evita selección manual del cliente.
 
 ---
 
-## D12 — Commits sin referencia a herramientas de IA
+## D12 — Formato de mensajes de commit
 
-**Decisión:** Los mensajes de commit no incluyen `Co-Authored-By: Claude`, referencias
-a herramientas de IA ni texto autogenerado por modelos.
+**Decisión:** Los mensajes de commit son concisos, en español, orientados al qué funcional.
+No incluyen metadatos de autoría externos ni texto generado automáticamente.
 
 **Razón:** El proyecto es un trabajo académico de titulación. El historial de git debe
-reflejar el trabajo del autor para la defensa y evaluación.
+reflejar el trabajo del autor de forma clara y verificable para la defensa y evaluación.
 
 ---
 
