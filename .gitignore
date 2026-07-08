@@ -69,6 +69,7 @@ seed_historicos.py
 htmlcov/
 .coverage
 coverage.xml
+reporte_pruebas.html
 
 # Flask instance folder
 instance/

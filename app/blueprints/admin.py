@@ -616,6 +616,11 @@ def editar_usuario(id):
     return render_template("admin/usuario_form.html", usuario=usuario, roles=ROLES_USUARIO)
 
 
+def puede_desactivar_usuario(usuario, solicitante):
+    """Regla pura: nadie puede desactivar su propia cuenta."""
+    return usuario.id != solicitante.id
+
+
 @admin_bp.route("/usuarios/<int:id>/eliminar", methods=["POST"])
 @login_required
 @role_required(*_solo_propietario)
@@ -624,7 +629,7 @@ def eliminar_usuario(id):
     if not usuario or not usuario.activo:
         flash("Usuario no encontrado.", "danger")
         return redirect(url_for("admin.listar_usuarios"))
-    if usuario.id == current_user.id:
+    if not puede_desactivar_usuario(usuario, current_user):
         flash("No puedes desactivar tu propia cuenta.", "danger")
         return redirect(url_for("admin.listar_usuarios"))
     usuario.activo = False

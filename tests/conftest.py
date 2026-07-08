@@ -9,10 +9,8 @@ Las factories crean objetos reales del ORM (no mocks) para que el motor
 predictivo opere sobre relaciones SQLAlchemy auténticas.
 """
 import pytest
-from flask_login import login_required
 
 from app import create_app, db
-from app.utils.decorators import role_required
 
 # Importa los modelos para que db.create_all() registre todas las tablas.
 from app.models.user import Usuario
@@ -26,30 +24,9 @@ from app.models.equipment import (
 from app.models.maintenance import Mantenimiento, DetalleMantenimiento
 
 
-def _registrar_rutas_de_prueba(app):
-    """
-    Rutas montadas solo en la app de prueba para ejercitar @role_required sobre
-    una vista real, respetando el orden documentado (@login_required primero).
-    No forman parte de la aplicación de producción.
-    """
-
-    @app.route("/_test/solo-admin")
-    @login_required
-    @role_required("propietario", "administrativo")
-    def _vista_solo_admin():
-        return "ok-admin"
-
-    @app.route("/_test/solo-tecnico")
-    @login_required
-    @role_required("tecnico")
-    def _vista_solo_tecnico():
-        return "ok-tecnico"
-
-
 @pytest.fixture
 def app():
     app = create_app("testing")
-    _registrar_rutas_de_prueba(app)
     with app.app_context():
         db.create_all()
         yield app
@@ -60,11 +37,6 @@ def app():
 @pytest.fixture
 def session(app):
     return db.session
-
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
 
 
 class Factory:

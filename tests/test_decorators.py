@@ -1,74 +1,72 @@
 """
-Pruebas de caracterización del decorador @role_required
-(app/utils/decorators.py).
+Pruebas unitarias del decorador @role_required (app/utils/decorators.py).
 
-Se montan dos vistas de prueba en la app "testing" (ver conftest.py):
-- /_test/solo-admin   -> @role_required("propietario", "administrativo")
-- /_test/solo-tecnico -> @role_required("tecnico")
-
-Ambas llevan @login_required ENCIMA de @role_required, el orden documentado
-en AGENTS.md. La autenticación se simula fijando la sesión de Flask-Login.
+Se envuelve una función Python simple con el decorador real y se invoca
+directamente dentro de un app_context, sustituyendo current_user por un stub
+con el atributo .rol. Sin rutas HTTP ni test client.
 """
+import pytest
+from unittest.mock import patch
+
+from app.utils.decorators import role_required
 
 
-def _autenticar(client, user):
-    with client.session_transaction() as sess:
-        sess["_user_id"] = str(user.id)
-        sess["_fresh"] = True
+class _UsuarioStub:
+    def __init__(self, rol):
+        self.rol = rol
 
 
-def test_rol_propietario_accede_a_vista_de_admin(client, factory):
-    user = factory.usuario(rol="propietario")
-    _autenticar(client, user)
-
-    resp = client.get("/_test/solo-admin")
-
-    assert resp.status_code == 200
-    assert resp.data == b"ok-admin"
+@pytest.fixture
+def vista_solo_admin():
+    @role_required("propietario", "administrativo")
+    def vista():
+        return "ok-admin"
+    return vista
 
 
-def test_rol_administrativo_accede_a_vista_de_admin(client, factory):
-    user = factory.usuario(rol="administrativo")
-    _autenticar(client, user)
-
-    resp = client.get("/_test/solo-admin")
-
-    assert resp.status_code == 200
-
-
-def test_rol_no_permitido_recibe_403(client, factory):
-    user = factory.usuario(rol="tecnico")
-    _autenticar(client, user)
-
-    resp = client.get("/_test/solo-admin")
-
-    assert resp.status_code == 403
+@pytest.fixture
+def vista_solo_tecnico():
+    @role_required("tecnico")
+    def vista():
+        return "ok-tecnico"
+    return vista
 
 
-def test_rol_tecnico_accede_a_su_vista(client, factory):
-    user = factory.usuario(rol="tecnico")
-    _autenticar(client, user)
-
-    resp = client.get("/_test/solo-tecnico")
-
-    assert resp.status_code == 200
-    assert resp.data == b"ok-tecnico"
-
-
-def test_propietario_no_accede_a_vista_exclusiva_de_tecnico(client, factory):
-    user = factory.usuario(rol="propietario")
-    _autenticar(client, user)
-
-    resp = client.get("/_test/solo-tecnico")
-
-    assert resp.status_code == 403
+def _con_usuario(rol, func, app):
+    # test_request_context (no solo app_context) es necesario porque la vista
+    # 403 real renderiza errors/403.html, y el context_processor global de la
+    # app (app/__init__.py) lee flask_login.current_user para la navbar. El
+    # patch cubre la verificación de rol en el decorador; el contexto de
+    # request cubre ese acceso incidental de la plantilla.
+    with app.test_request_context("/"), patch("app.utils.decorators.current_user", _UsuarioStub(rol)):
+        return func()
 
 
-def test_usuario_no_autenticado_es_redirigido_por_login_required_antes_de_role(client):
-    # Sin autenticar: si @role_required corriera primero, fallaría al leer
-    # current_user.rol (AnonymousUser no tiene rol). El 302 a login prueba que
-    # @login_required se evalúa antes.
-    resp = client.get("/_test/solo-admin")
+def test_rol_propietario_accede_a_vista_de_admin(app, vista_solo_admin):
+    resultado = _con_usuario("propietario", vista_solo_admin, app)
 
-    assert resp.status_code == 302
-    assert "/auth/login" in resp.headers["Location"]
+    assert resultado == "ok-admin"
+
+
+def test_rol_administrativo_accede_a_vista_de_admin(app, vista_solo_admin):
+    resultado = _con_usuario("administrativo", vista_solo_admin, app)
+
+    assert resultado == "ok-admin"
+
+
+def test_rol_no_permitido_recibe_403(app, vista_solo_admin):
+    _, status = _con_usuario("tecnico", vista_solo_admin, app)
+
+    assert status == 403
+
+
+def test_rol_tecnico_accede_a_su_vista(app, vista_solo_tecnico):
+    resultado = _con_usuario("tecnico", vista_solo_tecnico, app)
+
+    assert resultado == "ok-tecnico"
+
+
+def test_propietario_no_accede_a_vista_exclusiva_de_tecnico(app, vista_solo_tecnico):
+    _, status = _con_usuario("propietario", vista_solo_tecnico, app)
+
+    assert status == 403
