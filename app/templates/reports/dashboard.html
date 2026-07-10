@@ -21,7 +21,26 @@
       </option>
     {% endfor %}
   </select>
+  <label for="estado" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
+    <i class="bi bi-filter"></i> Estado
+  </label>
+  <select name="estado" id="estado" class="form-select form-select-sm"
+          onchange="this.form.submit()">
+    <option value="">Todos</option>
+    <option value="vencido" {% if estado == 'vencido' %}selected{% endif %}>Vencidos</option>
+    <option value="en_plazo" {% if estado == 'en_plazo' %}selected{% endif %}>En plazo</option>
+    <option value="proximo" {% if estado == 'proximo' %}selected{% endif %}>Por vencer</option>
+    <option value="criticos" {% if estado == 'criticos' %}selected{% endif %}>Vencidos y por vencer</option>
+  </select>
   {% if zona_id %}
+    <label for="fecha" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
+      <i class="bi bi-calendar3"></i> Fecha
+    </label>
+    <input type="date" name="fecha" id="fecha" class="form-control form-control-sm"
+           value="{{ fecha }}" style="width: 9.5rem;">
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Aplicar</button>
+  {% endif %}
+  {% if zona_id or estado or fecha != today %}
     <button type="button" class="btn btn-link btn-sm text-decoration-none"
             data-filter-reset>Limpiar</button>
   {% endif %}
@@ -29,10 +48,8 @@
 </form>
 {% if zona_id %}
   <div class="d-flex align-items-center gap-2 mb-4">
-    <input type="date" id="pdf-fecha" class="form-control form-control-sm"
-           value="{{ today }}" style="width: 9rem;">
     <a id="pdf-link"
-       href="{{ url_for('reports.pdf_zona', zona_id=zona_id) }}?fecha={{ today }}"
+       href="{{ url_for('reports.pdf_zona', zona_id=zona_id) }}?fecha={{ fecha }}&estado={{ estado }}"
        target="_blank" class="btn btn-outline-secondary btn-sm text-nowrap">
       <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
     </a>
@@ -85,8 +102,8 @@
   <div class="alert alert-success">
     <i class="bi bi-check-circle-fill"></i>
     <div>
-      <strong>Sin pendientes en esta zona.</strong>
-      No hay mantenimientos vencidos ni próximos a vencer.
+      <strong>Sin equipos para este filtro.</strong>
+      No hay componentes que coincidan con el estado seleccionado en esta zona.
     </div>
   </div>
 {% else %}
@@ -137,8 +154,8 @@
             </tr>
           </thead>
           <tbody>
-            {% for v in item.vencimientos if v.urgencia != 'en_plazo' %}
-            <tr class="{% if v.urgencia == 'vencido' %}table-danger{% else %}table-warning{% endif %}">
+            {% for v in item.vencimientos %}
+            <tr class="{% if v.urgencia == 'vencido' %}table-danger{% elif v.urgencia == 'proximo' %}table-warning{% else %}table-success{% endif %}">
               <td>{{ v.componente.nombre }}</td>
               <td class="text-nowrap">{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
               <td class="text-nowrap">
@@ -177,19 +194,5 @@
       </div>
     </div>
   {% endfor %}
-{% endif %}
-{% endblock %}
-
-{% block scripts %}
-{% if zona_id %}
-<script>
-  const fechaInput = document.getElementById('pdf-fecha');
-  const pdfLink   = document.getElementById('pdf-link');
-  const base      = "{{ url_for('reports.pdf_zona', zona_id=zona_id) }}";
-
-  fechaInput.addEventListener('change', () => {
-    pdfLink.href = base + '?fecha=' + fechaInput.value;
-  });
-</script>
 {% endif %}
 {% endblock %}

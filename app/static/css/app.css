@@ -254,3 +254,9 @@ body {
 @media (max-width: 575.98px) {
   .wm-form-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── Impresión ──────────────────────────────────────────────────────────── */
+@media print {
+  @page { size: landscape; margin: 1cm; }
+  .table { font-size: .8rem; }
+}

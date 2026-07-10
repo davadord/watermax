@@ -84,7 +84,7 @@
         e.preventDefault();
         var form = btn.closest("form");
         if (!form) return;
-        form.querySelectorAll("select, input[type=text], input[type=search]").forEach(function (el) {
+        form.querySelectorAll("select, input[type=text], input[type=search], input[type=date]").forEach(function (el) {
           if (el.tagName === "SELECT") el.selectedIndex = 0;
           else el.value = "";
         });

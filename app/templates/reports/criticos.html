@@ -32,7 +32,19 @@
     <option value="proximo"  {% if urgencia == 'proximo' %}selected{% endif %}>Solo próximos</option>
   </select>
 
-  {% if zona_id or urgencia %}
+  <label for="cliente_id" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
+    <i class="bi bi-person"></i> Cliente
+  </label>
+  <select name="cliente_id" id="cliente_id" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">Todos los clientes</option>
+    {% for cliente in clientes %}
+      <option value="{{ cliente.id }}" {% if cliente.id == cliente_id %}selected{% endif %}>
+        {{ cliente.nombre }}
+      </option>
+    {% endfor %}
+  </select>
+
+  {% if zona_id or urgencia or cliente_id %}
     <button type="button" class="btn btn-link btn-sm text-decoration-none" data-filter-reset>
       Limpiar
     </button>

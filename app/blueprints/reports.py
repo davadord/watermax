@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from datetime import date
 from app import db
-from app.models.client import Zona
+from app.models.client import Zona, Cliente
 from app.models.equipment import EquipoInstalado
 from app.services.prediction_service import (
     calcular_vencimientos, get_equipos_criticos, get_resumen_global,
@@ -12,6 +12,7 @@ from app.services.prediction_service import (
 )
 from app.services.report_service import (
     get_reporte_zona, get_reporte_cliente, build_reporte_zona_pdf,
+    ESTADOS_POR_FILTRO,
 )
 
 reports_bp = Blueprint("reports", __name__)
@@ -21,6 +22,12 @@ reports_bp = Blueprint("reports", __name__)
 @login_required
 def dashboard():
     zona_id = request.args.get("zona_id", type=int)
+    estado = request.args.get("estado", "")
+    fecha_str = request.args.get("fecha")
+    try:
+        fecha_ref = date.fromisoformat(fecha_str) if fecha_str else date.today()
+    except ValueError:
+        fecha_ref = date.today()
     zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
 
     mantenimientos_hoy = []
@@ -30,8 +37,13 @@ def dashboard():
                 EquipoInstalado.zona_id == zona_id, EquipoInstalado.activo == True
             )
         ).scalars().all()
+        urgencias_filtro = ESTADOS_POR_FILTRO.get(estado)
         for equipo in equipos:
-            vencimientos = calcular_vencimientos(equipo)
+            vencimientos = calcular_vencimientos(equipo, fecha_ref=fecha_ref)
+            if urgencias_filtro is not None:
+                vencimientos = [v for v in vencimientos if v["urgencia"] in urgencias_filtro]
+                if not vencimientos:
+                    continue
             n_vencidos = sum(1 for v in vencimientos if v["urgencia"] == URGENCIA_VENCIDO)
             n_proximos = sum(1 for v in vencimientos if v["urgencia"] == URGENCIA_PROXIMO)
             mantenimientos_hoy.append({
@@ -47,6 +59,8 @@ def dashboard():
         "reports/dashboard.html",
         zonas=zonas,
         zona_id=zona_id,
+        estado=estado,
+        fecha=fecha_ref.isoformat(),
         mantenimientos_hoy=mantenimientos_hoy,
         resumen_global=resumen_global,
         today=date.today().isoformat(),
@@ -58,8 +72,12 @@ def dashboard():
 def criticos():
     zona_id = request.args.get("zona_id", type=int)
     urgencia = request.args.get("urgencia")
+    cliente_id = request.args.get("cliente_id", type=int)
     zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
-    equipos_criticos = get_equipos_criticos(zona_id=zona_id, urgencia=urgencia)
+    clientes = db.session.execute(
+        select(Cliente).where(Cliente.activo == True).order_by(Cliente.nombre)
+    ).scalars().all()
+    equipos_criticos = get_equipos_criticos(zona_id=zona_id, urgencia=urgencia, cliente_id=cliente_id)
 
     return render_template(
         "reports/criticos.html",
@@ -67,6 +85,8 @@ def criticos():
         zonas=zonas,
         zona_id=zona_id,
         urgencia=urgencia,
+        clientes=clientes,
+        cliente_id=cliente_id,
     )
 
 
@@ -79,7 +99,8 @@ def pdf_zona(zona_id):
         fecha = date_type.fromisoformat(fecha_str) if fecha_str else None
     except ValueError:
         fecha = None
-    datos = get_reporte_zona(zona_id, fecha=fecha)
+    estado = request.args.get("estado") or None
+    datos = get_reporte_zona(zona_id, fecha=fecha, estado=estado)
     if not datos["zona"]:
         abort(404)
     try:

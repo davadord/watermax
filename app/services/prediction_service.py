@@ -156,7 +156,7 @@ def calcular_proximo_componente(equipo, componente, fecha_intervencion):
     return fecha_intervencion + timedelta(days=intervalo_dias)
 
 
-def get_equipos_criticos(zona_id=None, urgencia=None, with_detail=True):
+def get_equipos_criticos(zona_id=None, urgencia=None, cliente_id=None, with_detail=True):
     """
     Retorna lista de dicts para todos los equipos activos que tienen al menos
     un componente vencido o próximo a vencer.
@@ -185,7 +185,7 @@ def get_equipos_criticos(zona_id=None, urgencia=None, with_detail=True):
         if cache is None:
             cache = {}
             g._equipos_criticos_cache = cache
-        cache_key = (zona_id, urgencia)
+        cache_key = (zona_id, urgencia, cliente_id)
         if cache_key in cache:
             return cache[cache_key]
 
@@ -207,6 +207,8 @@ def get_equipos_criticos(zona_id=None, urgencia=None, with_detail=True):
     )
     if zona_id:
         stmt = stmt.where(EquipoInstalado.zona_id == zona_id)
+    if cliente_id:
+        stmt = stmt.where(EquipoInstalado.cliente_id == cliente_id)
 
     equipos = db.session.execute(stmt).unique().scalars().all()
 

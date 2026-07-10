@@ -8,11 +8,18 @@ from app.models.client import Zona, Cliente
 from app.models.equipment import EquipoInstalado, TipoEquipo, TipoEquipoComponente
 from app.models.maintenance import Mantenimiento, DetalleMantenimiento
 from app.services.prediction_service import (
-    calcular_vencimientos, URGENCIA_VENCIDO, URGENCIA_PROXIMO,
+    calcular_vencimientos, URGENCIA_VENCIDO, URGENCIA_PROXIMO, URGENCIA_EN_PLAZO,
 )
 
+ESTADOS_POR_FILTRO = {
+    "vencido": (URGENCIA_VENCIDO,),
+    "proximo": (URGENCIA_PROXIMO,),
+    "en_plazo": (URGENCIA_EN_PLAZO,),
+    "criticos": (URGENCIA_VENCIDO, URGENCIA_PROXIMO),
+}
 
-def get_reporte_zona(zona_id: int, fecha=None) -> dict:
+
+def get_reporte_zona(zona_id: int, fecha=None, estado=None) -> dict:
     zona = db.session.get(Zona, zona_id)
 
     stmt = (
@@ -32,6 +39,7 @@ def get_reporte_zona(zona_id: int, fecha=None) -> dict:
     equipos = db.session.execute(stmt).scalars().unique().all()
 
     fecha_ref = fecha or date.today()
+    urgencias_filtro = ESTADOS_POR_FILTRO.get(estado)
     items = []
     resumen = {"total": 0, "vencidos": 0, "proximos": 0, "en_plazo": 0}
 
@@ -48,6 +56,11 @@ def get_reporte_zona(zona_id: int, fecha=None) -> dict:
         else:
             resumen["en_plazo"] += 1
 
+        if urgencias_filtro is not None:
+            vencimientos = [v for v in vencimientos if v["urgencia"] in urgencias_filtro]
+            if not vencimientos:
+                continue
+
         items.append({
             "equipo": equipo,
             "vencimientos": vencimientos,
@@ -63,6 +76,7 @@ def get_reporte_zona(zona_id: int, fecha=None) -> dict:
         "resumen": resumen,
         "fecha_ref": fecha_ref,
         "fecha_generacion": date.today(),
+        "estado": estado,
     }
 
 
@@ -155,7 +169,7 @@ def build_reporte_zona_pdf(datos):
     encabezado, 4 cajas de resumen, un bloque por equipo (cliente, tipo, serie,
     estado y sus componentes vencidos/próximos con fecha, días y fuente).
     """
-    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.units import cm
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle
@@ -182,7 +196,7 @@ def build_reporte_zona_pdf(datos):
                 self.__dict__.update(state)
                 self.setFont("Helvetica", 8)
                 self.setFillColor(colors.HexColor(_GRIS))
-                self.drawCentredString(A4[0] / 2.0, 1.0 * cm,
+                self.drawCentredString(landscape(A4)[0] / 2.0, 1.0 * cm,
                                        f"Página {self._pageNumber} de {num_pages}")
                 canvas.Canvas.showPage(self)
             canvas.Canvas.save(self)
@@ -193,7 +207,7 @@ def build_reporte_zona_pdf(datos):
 
     buf = BytesIO()
     doc = SimpleDocTemplate(
-        buf, pagesize=A4,
+        buf, pagesize=landscape(A4),
         topMargin=1.8 * cm, bottomMargin=1.8 * cm,
         leftMargin=2 * cm, rightMargin=2 * cm,
         title=f"Reporte Zona {zona.nombre}",
@@ -305,8 +319,12 @@ def build_reporte_zona_pdf(datos):
                 head += f'  {_badge(str(item["n_proximos"]) + " próximos", _NARANJA)}'
 
             celda = [Paragraph(head, st_head)]
-            criticos = [v for v in item["vencimientos"] if v["urgencia"] != "en_plazo"]
-            for v in criticos:
+            mostrar_en_plazo = datos.get("estado") is not None
+            filas = [
+                v for v in item["vencimientos"]
+                if mostrar_en_plazo or v["urgencia"] != "en_plazo"
+            ]
+            for v in filas:
                 d = v["dias_restantes"]
                 if d < 0:
                     plazo = f"hace {-d} d"
