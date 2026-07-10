@@ -75,10 +75,13 @@ Variables de entorno requeridas en producción: `SECRET_KEY`, `DATABASE_URL`.
 
 ### `/auth` — `app/blueprints/auth.py`
 
-Rutas: `GET/POST /auth/login`, `GET /auth/logout`.
+Rutas: `GET/POST /auth/login`, `GET /auth/logout`, `GET/POST /auth/perfil`.
 
 Lógica de bloqueo: incrementa `Usuario.intentos_fallidos` en cada fallo; bloquea la cuenta
 hasta `bloqueado_hasta` (datetime) si supera el umbral.
+
+`/auth/perfil`: cambio de contraseña propia (usuario autenticado), valida contraseña
+actual + confirmación de la nueva, hash bcrypt. Lógica pura en `validar_cambio_password()`.
 
 ### `/admin` — `app/blueprints/admin.py`
 
@@ -88,7 +91,8 @@ Rutas de escritura protegidas con `@login_required` + `@role_required("propietar
 
 **Gestión de usuarios:** listado, creación, edición y desactivación (soft delete — `activo=False`).
 Regla de negocio: solo `propietario` puede crear/editar usuarios con rol `propietario`.
-Un usuario no puede desactivarse a sí mismo.
+Un usuario no puede desactivarse a sí mismo — validado en `puede_desactivar_usuario(usuario, solicitante)`,
+función pura usada por `eliminar_usuario()`.
 
 Flujo guiado equipo desde cliente: al crear un equipo, la URL puede incluir `?cliente_id=X`.
 El formulario muestra el cliente como texto fijo con `<input hidden>`. Sin parámetro, muestra
@@ -102,7 +106,7 @@ Rutas:
 - `GET /maintenance/cliente/<id>` — historial agrupado por equipo
 - `GET /maintenance/` — listado global de mantenimientos (filtros por cliente y fechas; solo admin)
 - `GET/POST /maintenance/<id>/editar` — edición completa con recálculo del motor predictivo
-- `POST /maintenance/<id>/anular` — anulación con motivo (soft delete: `anulado=True`; excluido del motor y de PDFs)
+- `POST /maintenance/<id>/anular` — anulación con motivo (soft delete: `motivo_anulacion` con el texto de la razón; `NULL` = válido; excluido del motor y de PDFs)
 
 **Transacción atómica en nuevo mantenimiento:**
 1. `db.session.add(mant)` + `db.session.flush()` (obtiene `mant.id` sin commitear).
