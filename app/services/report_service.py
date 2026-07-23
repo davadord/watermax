@@ -1,11 +1,11 @@
 from datetime import date
 from io import BytesIO
 from xml.sax.saxutils import escape
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from app import db
 from app.models.client import Zona, Cliente
-from app.models.equipment import EquipoInstalado, TipoEquipo, TipoEquipoComponente
+from app.models.equipment import EquipoInstalado, TipoEquipo, TipoEquipoComponente, Componente
 from app.models.maintenance import Mantenimiento, DetalleMantenimiento
 from app.services.prediction_service import (
     calcular_vencimientos, URGENCIA_VENCIDO, URGENCIA_PROXIMO, URGENCIA_EN_PLAZO,
@@ -80,7 +80,7 @@ def get_reporte_zona(zona_id: int, fecha=None, estado=None) -> dict:
     }
 
 
-def get_reporte_cliente(cliente_id: int) -> dict:
+def get_reporte_cliente(cliente_id: int, equipo_id=None, desde=None, hasta=None) -> dict:
     cliente = db.session.get(Cliente, cliente_id)
 
     stmt = (
@@ -96,6 +96,8 @@ def get_reporte_cliente(cliente_id: int) -> dict:
                 .joinedload(TipoEquipoComponente.componente),
         )
     )
+    if equipo_id:
+        stmt = stmt.where(EquipoInstalado.id == equipo_id)
     equipos = db.session.execute(stmt).scalars().unique().all()
 
     items = []
@@ -114,6 +116,10 @@ def get_reporte_cliente(cliente_id: int) -> dict:
             )
             .order_by(Mantenimiento.fecha.desc())
         )
+        if desde:
+            hist_stmt = hist_stmt.where(Mantenimiento.fecha >= desde)
+        if hasta:
+            hist_stmt = hist_stmt.where(Mantenimiento.fecha <= hasta)
         historial = db.session.execute(hist_stmt).scalars().unique().all()
 
         items.append({
@@ -125,6 +131,49 @@ def get_reporte_cliente(cliente_id: int) -> dict:
     return {
         "cliente": cliente,
         "items": items,
+        "fecha_generacion": date.today(),
+        "equipo_id": equipo_id,
+        "desde": desde,
+        "hasta": hasta,
+    }
+
+
+def get_reporte_componentes_cambiados(desde, hasta, zona_id=None, cliente_id=None) -> dict:
+    stmt = (
+        select(Componente, func.count(DetalleMantenimiento.id).label("total"))
+        .join(DetalleMantenimiento, DetalleMantenimiento.componente_id == Componente.id)
+        .join(Mantenimiento, DetalleMantenimiento.mantenimiento_id == Mantenimiento.id)
+        .where(
+            Mantenimiento.fecha.between(desde, hasta),
+            DetalleMantenimiento.accion == "reemplazo",
+            Mantenimiento.completado == True,
+            Mantenimiento.motivo_anulacion == None,
+        )
+    )
+
+    if zona_id or cliente_id:
+        stmt = stmt.join(EquipoInstalado, Mantenimiento.equipo_id == EquipoInstalado.id)
+        if zona_id:
+            stmt = stmt.where(EquipoInstalado.zona_id == zona_id)
+        if cliente_id:
+            stmt = stmt.where(EquipoInstalado.cliente_id == cliente_id)
+
+    stmt = stmt.group_by(Componente.id).order_by(func.count(DetalleMantenimiento.id).desc())
+
+    filas = db.session.execute(stmt).all()
+    meses = max((hasta - desde).days / 30, 1)
+    items = [
+        {"componente": componente, "total": total, "promedio_mensual": total / meses}
+        for componente, total in filas
+    ]
+
+    return {
+        "items": items,
+        "total_reemplazos": sum(i["total"] for i in items),
+        "desde": desde,
+        "hasta": hasta,
+        "zona_id": zona_id,
+        "cliente_id": cliente_id,
         "fecha_generacion": date.today(),
     }
 
@@ -141,9 +190,16 @@ _ROJO = "#dc3545"
 _NARANJA = "#fd7e14"
 _VERDE = "#198754"
 _GRIS = "#6c757d"
-_TINTE_VENCIDO = "#fff5f5"
-_TINTE_PROXIMO = "#fff8f0"
+_TINTE_VENCIDO = "#fbeeec"
+_TINTE_PROXIMO = "#fbf1e2"
+_TINTE_EN_PLAZO = "#eaf5ef"
 _BORDE = "#e9ecef"
+
+_ESTADO_POR_URGENCIA = {
+    "vencido": ("Vencido", _ROJO, _TINTE_VENCIDO),
+    "proximo": ("Próximo", _NARANJA, _TINTE_PROXIMO),
+    "en_plazo": ("En plazo", _VERDE, _TINTE_EN_PLAZO),
+}
 
 _MESES = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
           "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -230,8 +286,10 @@ def build_reporte_zona_pdf(datos):
                               textColor=colors.HexColor(_GRIS), leading=10,
                               spaceBefore=2, spaceAfter=2)
     st_head = ParagraphStyle("ehead", fontName="Helvetica", fontSize=9, leading=12)
-    st_comp = ParagraphStyle("comp", fontName="Helvetica", fontSize=8.5,
-                            leading=11, leftIndent=14)
+    st_comp = ParagraphStyle("comp", fontName="Helvetica", fontSize=8.5, leading=11)
+    st_comp_dias = ParagraphStyle("comp_dias", parent=st_comp, fontName="Helvetica",
+                                  textColor=colors.HexColor(_GRIS))
+    st_comp_estado = ParagraphStyle("comp_estado", parent=st_comp, fontName="Helvetica-Bold")
     st_footer = ParagraphStyle("footer", fontName="Helvetica", fontSize=7.5,
                                textColor=colors.HexColor(_GRIS), leading=10)
     st_vacio = ParagraphStyle("vacio", fontName="Helvetica", fontSize=9,
@@ -299,11 +357,11 @@ def build_reporte_zona_pdf(datos):
         for item in items:
             eq = item["equipo"]
             if item["n_vencidos"] > 0:
-                tinte, estado = _TINTE_VENCIDO, _badge("Vencido", _ROJO)
+                estado = _badge("Vencido", _ROJO)
             elif item["n_proximos"] > 0:
-                tinte, estado = _TINTE_PROXIMO, _badge("Próximo", _NARANJA)
+                estado = _badge("Próximo", _NARANJA)
             else:
-                tinte, estado = "#ffffff", _badge("En plazo", _VERDE)
+                estado = _badge("En plazo", _VERDE)
 
             dirpart = (f' <font color="{_GRIS}">· {_esc(eq.cliente.direccion)}</font>'
                        if eq.cliente.direccion else "")
@@ -318,13 +376,12 @@ def build_reporte_zona_pdf(datos):
             if item["n_proximos"]:
                 head += f'  {_badge(str(item["n_proximos"]) + " próximos", _NARANJA)}'
 
-            celda = [Paragraph(head, st_head)]
-            mostrar_en_plazo = datos.get("estado") is not None
-            filas = [
-                v for v in item["vencimientos"]
-                if mostrar_en_plazo or v["urgencia"] != "en_plazo"
+            filas_tabla = [[Paragraph(head, st_head), "", ""]]
+            fila_estilos = [
+                ("SPAN", (0, 0), (-1, 0)),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f8f9fa")),
             ]
-            for v in filas:
+            for i, v in enumerate(item["vencimientos"], start=1):
                 d = v["dias_restantes"]
                 if d < 0:
                     plazo = f"hace {-d} d"
@@ -332,22 +389,31 @@ def build_reporte_zona_pdf(datos):
                     plazo = "hoy"
                 else:
                     plazo = f"en {d} d"
-                celda.append(Paragraph(
-                    f'<b>{_esc(v["componente"].nombre)}</b> — vence '
-                    f'{v["fecha_proyectada"].strftime("%d/%m/%Y")} — {plazo} '
-                    f'<font color="{_GRIS}">({_esc(v["fuente"])})</font>',
-                    st_comp))
+                nombre_estado, color_estado, tinte_fila = _ESTADO_POR_URGENCIA[v["urgencia"]]
+                filas_tabla.append([
+                    Paragraph(f'<b>{_esc(v["componente"].nombre)}</b>', st_comp),
+                    Paragraph(f'vence {v["fecha_proyectada"].strftime("%d/%m/%Y")} — {plazo}',
+                              st_comp_dias),
+                    Paragraph(f'<font color="{color_estado}">{nombre_estado}</font>',
+                              st_comp_estado),
+                ])
+                fila_estilos.append(
+                    ("BACKGROUND", (0, i), (-1, i), colors.HexColor(tinte_fila))
+                )
 
-            bloque = Table([[celda]], colWidths=[ancho])
-            bloque.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(tinte)),
-                ("LINEBELOW", (0, 0), (-1, -1), 0.5, colors.HexColor(_BORDE)),
+            bloque = Table(filas_tabla, colWidths=[ancho * 0.5, ancho * 0.35, ancho * 0.15])
+            fila_estilos += [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LINEBELOW", (0, 0), (-1, -2), 0.5, colors.HexColor(_BORDE)),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor(_BORDE)),
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ]))
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+            bloque.setStyle(TableStyle(fila_estilos))
             flow.append(KeepTogether(bloque))
+            flow.append(Spacer(1, 6))
 
     flow.append(Spacer(1, 16))
     pie = (f"Watermax · Reporte generado automáticamente el "

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import page_header, empty_state, delete_button, icon_link %}
+{% from "_macros.html" import page_header, empty_state, delete_button, icon_link, pagination %}
 {% block title %}Clientes — Watermax{% endblock %}
 {% block content %}
 
@@ -13,7 +13,13 @@
 {% endcall %}
 
 <form method="GET" class="wm-toolbar">
-  <label for="zona_id" class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+  <label for="q" class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+    <i class="bi bi-search"></i> Buscar
+  </label>
+  <input type="text" name="q" id="q" class="form-control form-control-sm" style="width: 16rem;"
+         placeholder="Nombre o identificación…" value="{{ q }}">
+
+  <label for="zona_id" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
     <i class="bi bi-funnel"></i> Filtrar
   </label>
   <select name="zona_id" id="zona_id" class="form-select form-select-sm"
@@ -23,20 +29,21 @@
       <option value="{{ zona.id }}" {% if zona.id == zona_id %}selected{% endif %}>{{ zona.nombre }}</option>
     {% endfor %}
   </select>
-  {% if zona_id %}
+  <button type="submit" class="btn btn-outline-secondary btn-sm">Buscar</button>
+  {% if zona_id or q %}
     <button type="button" class="btn btn-link btn-sm text-decoration-none"
             data-filter-reset>Limpiar</button>
   {% endif %}
   <div class="wm-toolbar-spacer"></div>
-  <span class="text-muted small">{{ clientes|length }} cliente{% if clientes|length != 1 %}s{% endif %}</span>
+  <span class="text-muted small">{{ paginacion.total }} cliente{% if paginacion.total != 1 %}s{% endif %}</span>
 </form>
 
-{% if not clientes %}
+{% if not paginacion.items %}
   <div class="wm-table-card">
-    {% if zona_id %}
+    {% if zona_id or q %}
       {{ empty_state(
-         title="Ningún cliente en esta zona",
-         message="Cambia o limpia el filtro para ver todos los clientes.",
+         title="Ningún cliente coincide",
+         message="Cambia o limpia el filtro/búsqueda para ver todos los clientes.",
          icon="people",
          action_label="Limpiar filtros",
          action_url=url_for('admin.clientes'),
@@ -65,7 +72,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for cliente in clientes %}
+        {% for cliente in paginacion.items %}
         <tr>
           <td><strong>{{ cliente.nombre }}</strong></td>
           <td>
@@ -77,8 +84,8 @@
             {{ cliente.direccion or '—' }}
           </td>
           <td class="actions">
-            {{ icon_link(url_for('reports.pdf_cliente', cliente_id=cliente.id),
-                        "file-earmark-pdf", "Reporte PDF", "outline-secondary", "_blank") }}
+            {{ icon_link(url_for('reports.configurar_reporte_cliente', cliente_id=cliente.id),
+                        "file-earmark-pdf", "Reporte PDF") }}
             {{ icon_link(url_for('maintenance.historial_cliente', cliente_id=cliente.id),
                         "clock-history", "Ver historial", "outline-primary") }}
             {{ icon_link(url_for('admin.nuevo_equipo', cliente_id=cliente.id),
@@ -97,5 +104,6 @@
     </table>
   </div>
 </div>
+{{ pagination(paginacion, 'admin.clientes', extra_args={'zona_id': zona_id or '', 'q': q}) }}
 {% endif %}
 {% endblock %}

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, Response, abort, flash, r
 from flask_login import login_required
 from sqlalchemy import select
 
-from datetime import date
+from datetime import date, timedelta
 from app import db
 from app.models.client import Zona, Cliente
 from app.models.equipment import EquipoInstalado
@@ -12,8 +12,9 @@ from app.services.prediction_service import (
 )
 from app.services.report_service import (
     get_reporte_zona, get_reporte_cliente, build_reporte_zona_pdf,
-    ESTADOS_POR_FILTRO,
+    get_reporte_componentes_cambiados, ESTADOS_POR_FILTRO,
 )
+from app.utils.decorators import role_required
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -90,6 +91,41 @@ def criticos():
     )
 
 
+@reports_bp.route("/componentes-cambiados")
+@login_required
+@role_required("propietario", "administrativo")
+def componentes_cambiados():
+    hasta_str = request.args.get("hasta")
+    desde_str = request.args.get("desde")
+    try:
+        hasta = date.fromisoformat(hasta_str) if hasta_str else date.today()
+    except ValueError:
+        hasta = date.today()
+    try:
+        desde = date.fromisoformat(desde_str) if desde_str else hasta - timedelta(days=90)
+    except ValueError:
+        desde = hasta - timedelta(days=90)
+
+    zona_id = request.args.get("zona_id", type=int)
+    cliente_id = request.args.get("cliente_id", type=int)
+
+    zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
+    clientes = db.session.execute(
+        select(Cliente).where(Cliente.activo == True).order_by(Cliente.nombre)
+    ).scalars().all()
+
+    datos = get_reporte_componentes_cambiados(
+        desde, hasta, zona_id=zona_id, cliente_id=cliente_id
+    )
+
+    return render_template(
+        "reports/componentes_cambiados.html",
+        **datos,
+        zonas=zonas,
+        clientes=clientes,
+    )
+
+
 @reports_bp.route("/zona/<int:zona_id>/pdf")
 @login_required
 def pdf_zona(zona_id):
@@ -112,7 +148,27 @@ def pdf_zona(zona_id):
     return Response(
         pdf,
         mimetype="application/pdf",
-        headers={"Content-Disposition": f"inline; filename=reporte-zona-{slug}-{fecha_nombre}.pdf"},
+        headers={
+            "Content-Disposition": f"inline; filename=reporte-zona-{slug}-{fecha_nombre}.pdf",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@reports_bp.route("/cliente/<int:cliente_id>")
+@login_required
+def configurar_reporte_cliente(cliente_id):
+    cliente = db.session.get(Cliente, cliente_id)
+    if not cliente:
+        abort(404)
+    equipos = db.session.execute(
+        select(EquipoInstalado)
+        .where(EquipoInstalado.cliente_id == cliente_id, EquipoInstalado.activo == True)
+        .order_by(EquipoInstalado.id)
+    ).scalars().all()
+    return render_template(
+        "reports/configurar_cliente.html",
+        cliente=cliente, equipos=equipos, hoy=date.today().isoformat(),
     )
 
 
@@ -120,7 +176,19 @@ def pdf_zona(zona_id):
 @login_required
 def pdf_cliente(cliente_id):
     from weasyprint import HTML
-    datos = get_reporte_cliente(cliente_id)
+    equipo_id = request.args.get("equipo_id", type=int)
+    desde_str = request.args.get("desde")
+    hasta_str = request.args.get("hasta")
+    try:
+        desde = date.fromisoformat(desde_str) if desde_str else None
+    except ValueError:
+        desde = None
+    try:
+        hasta = date.fromisoformat(hasta_str) if hasta_str else None
+    except ValueError:
+        hasta = None
+
+    datos = get_reporte_cliente(cliente_id, equipo_id=equipo_id, desde=desde, hasta=hasta)
     if not datos["cliente"]:
         abort(404)
     html = render_template("reports/pdf_cliente.html", **datos)
@@ -132,5 +200,8 @@ def pdf_cliente(cliente_id):
     return Response(
         pdf,
         mimetype="application/pdf",
-        headers={"Content-Disposition": f"inline; filename=reporte-cliente-{slug}.pdf"},
+        headers={
+            "Content-Disposition": f"inline; filename=reporte-cliente-{slug}.pdf",
+            "Cache-Control": "no-store",
+        },
     )

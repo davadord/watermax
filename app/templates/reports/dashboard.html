@@ -53,6 +53,12 @@
        target="_blank" class="btn btn-outline-secondary btn-sm text-nowrap">
       <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
     </a>
+    {% if is_admin %}
+      <a href="{{ url_for('reports.componentes_cambiados', zona_id=zona_id) }}"
+         class="btn btn-outline-secondary btn-sm text-nowrap">
+        <i class="bi bi-graph-up"></i> Componentes cambiados de esta zona
+      </a>
+    {% endif %}
   </div>
 {% endif %}
 
@@ -109,7 +115,8 @@
 {% else %}
   {% set total = mantenimientos_hoy|length %}
   <p class="text-muted small mb-3">
-    {{ total }} equipo{% if total != 1 %}s{% endif %} con vencimientos en la zona seleccionada.
+    {{ total }} equipo{% if total != 1 %}s{% endif %} en la zona seleccionada
+    {% if estado %}(filtro: {{ estado }}){% endif %}.
   </p>
 
   {% for item in mantenimientos_hoy %}

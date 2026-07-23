@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state, client_picker %}
+{% block title %}Componentes cambiados — Watermax{% endblock %}
+
+{% block content %}
+
+{{ page_header(
+    "Componentes cambiados",
+    subtitle="Ranking de reemplazos por componente en un rango de fechas, para planificar abastecimiento.",
+    icon="graph-up") }}
+
+<form method="GET" class="wm-toolbar mb-4 d-print-none">
+  <label for="desde" class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+    <i class="bi bi-calendar3"></i> Desde
+  </label>
+  <input type="date" name="desde" id="desde" class="form-control form-control-sm"
+         value="{{ desde.isoformat() }}" style="width: 9.5rem;" onchange="this.form.submit()">
+
+  <label for="hasta" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
+    <i class="bi bi-calendar3"></i> Hasta
+  </label>
+  <input type="date" name="hasta" id="hasta" class="form-control form-control-sm"
+         value="{{ hasta.isoformat() }}" style="width: 9.5rem;" onchange="this.form.submit()">
+
+  <label for="zona_id" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
+    <i class="bi bi-geo-alt"></i> Zona
+  </label>
+  <select name="zona_id" id="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
+    <option value="">Todas las zonas</option>
+    {% for zona in zonas %}
+      <option value="{{ zona.id }}" {% if zona.id == zona_id %}selected{% endif %}>
+        {{ zona.nombre }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label for="cliente_id_buscar" class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
+    <i class="bi bi-person"></i> Cliente
+  </label>
+  <div style="width: 12rem;">
+    {{ client_picker(clientes, selected_id=cliente_id, required=False, placeholder="Todos los clientes…", autosubmit=True) }}
+  </div>
+
+  {% if zona_id or cliente_id %}
+    <button type="button" class="btn btn-link btn-sm text-decoration-none" data-filter-reset>
+      Limpiar
+    </button>
+  {% endif %}
+
+  <div class="wm-toolbar-spacer"></div>
+  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+    <i class="bi bi-printer"></i> Imprimir
+  </button>
+</form>
+
+{% if not items %}
+  <div class="card">
+    <div class="card-body">
+      {{ empty_state(
+        title="Sin reemplazos registrados",
+        message="No hay componentes reemplazados en el rango de fechas y filtros seleccionados.",
+        icon="check-circle") }}
+    </div>
+  </div>
+{% else %}
+  <p class="text-muted small mb-3 d-print-none">
+    {{ total_reemplazos }} reemplazo{% if total_reemplazos != 1 %}s{% endif %} registrado{% if total_reemplazos != 1 %}s{% endif %}
+    entre {{ desde.strftime('%d/%m/%Y') }} y {{ hasta.strftime('%d/%m/%Y') }}.
+  </p>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Componente</th>
+          <th>Reemplazos</th>
+          <th>Promedio mensual</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td class="fw-semibold">{{ item.componente.nombre }}</td>
+            <td>{{ item.total }}</td>
+            <td>{{ "%.1f"|format(item.promedio_mensual) }} / mes</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelector('[data-filter-reset]')?.addEventListener('click', () => {
+    const params = new URLSearchParams();
+    params.set('desde', '{{ desde.isoformat() }}');
+    params.set('hasta', '{{ hasta.isoformat() }}');
+    window.location = '{{ url_for("reports.componentes_cambiados") }}?' + params.toString();
+  });
+</script>
+{% endblock %}
+

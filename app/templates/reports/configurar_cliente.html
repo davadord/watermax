@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}Reporte de {{ cliente.nombre }} — Watermax{% endblock %}
+{% block content %}
+
+{{ page_header(
+    "Reporte de cliente",
+    subtitle=cliente.nombre,
+    icon="file-earmark-pdf",
+    breadcrumb=[("Clientes", url_for('admin.clientes')), (cliente.nombre, None)]) }}
+
+<form method="GET" action="{{ url_for('reports.pdf_cliente', cliente_id=cliente.id) }}"
+      target="_blank" class="wm-form-card" novalidate>
+  <h2 class="h6 text-uppercase text-muted mb-3">Equipo</h2>
+  <div class="wm-form-grid mb-3">
+    <div class="col-span-2">
+      <label class="form-label" for="equipo_id">Equipo</label>
+      <select name="equipo_id" id="equipo_id" class="form-select">
+        <option value="">Todos los equipos ({{ equipos|length }})</option>
+        {% for equipo in equipos %}
+          <option value="{{ equipo.id }}">
+            {{ equipo.tipo_equipo.nombre }}{% if equipo.numero_serie %} — S/N {{ equipo.numero_serie }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+      {% if not equipos %}
+        <div class="form-text text-warning">Este cliente no tiene equipos activos.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <hr>
+  <h2 class="h6 text-uppercase text-muted mb-3">Historial de mantenimientos</h2>
+  <div class="wm-form-grid mb-3">
+    <div>
+      <label class="form-label" for="desde">Desde <span class="text-muted small">(opcional)</span></label>
+      <input type="date" name="desde" id="desde" class="form-control" max="{{ hoy }}">
+    </div>
+    <div>
+      <label class="form-label" for="hasta">Hasta <span class="text-muted small">(opcional)</span></label>
+      <input type="date" name="hasta" id="hasta" class="form-control" max="{{ hoy }}">
+    </div>
+  </div>
+  <p class="text-muted small">
+    Deja el rango vacío para incluir todo el historial. La proyección de vencimientos siempre se calcula a partir de hoy.
+  </p>
+
+  <div class="wm-form-actions">
+    <button type="submit" class="btn btn-primary" {% if not equipos %}disabled{% endif %}>
+      <i class="bi bi-file-earmark-pdf"></i> Generar PDF
+    </button>
+    <a href="{{ url_for('admin.clientes') }}" class="btn btn-light">Cancelar</a>
+  </div>
+</form>
+
+{% endblock %}

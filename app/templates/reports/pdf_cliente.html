@@ -40,7 +40,7 @@
   /* ── Ficha cliente ── */
   .client-card {
     border: 1px solid #dee2e6;
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 10px 12px;
     margin-bottom: 18px;
     display: flex;
@@ -53,57 +53,18 @@
   /* ── Sección por equipo ── */
   .equipo-section {
     margin-bottom: 22px;
-    page-break-inside: avoid;
   }
   .equipo-header {
-    background: #f8f9fa;
+    background: #eaf2ff;
     border-left: 3px solid #0d6efd;
     padding: 6px 10px;
     margin-bottom: 8px;
+    border-radius: 0 4px 4px 0;
     font-weight: 600;
     font-size: 9.5pt;
+    page-break-after: avoid;
   }
   .equipo-header .meta { font-size: 7.5pt; color: #6c757d; font-weight: 400; margin-top: 2px; }
-
-  /* ── Tablas ── */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 10px;
-    font-size: 8.5pt;
-  }
-  thead th {
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    padding: 5px 6px;
-    text-align: left;
-    font-weight: 600;
-    font-size: 7.5pt;
-    text-transform: uppercase;
-    color: #6c757d;
-  }
-  tbody td {
-    border-bottom: 1px solid #f0f0f0;
-    padding: 5px 6px;
-    vertical-align: top;
-  }
-  .row-vencido  { background: #fff5f5; }
-  .row-proximo  { background: #fff8f0; }
-
-  /* ── Badges ── */
-  .badge {
-    display: inline-block;
-    padding: 1px 5px;
-    border-radius: 3px;
-    font-size: 7pt;
-    font-weight: 600;
-  }
-  .badge-danger    { background: #dc3545; color: #fff; }
-  .badge-warning   { background: #fd7e14; color: #fff; }
-  .badge-success   { background: #198754; color: #fff; }
-  .badge-secondary { background: #6c757d; color: #fff; }
-  .badge-info      { background: #0dcaf0; color: #000; }
-  .badge-primary   { background: #0d6efd; color: #fff; }
 
   /* ── Subtítulos de sección ── */
   .section-title {
@@ -116,9 +77,94 @@
     border-bottom: 1px solid #dee2e6;
   }
 
-  /* ── Detalles mantenimiento ── */
-  .detail-list { margin: 3px 0 0 8px; font-size: 8pt; }
-  .detail-list li { margin-bottom: 2px; }
+  /* ── Tabla de proyección: fila coloreada por su propio estado ── */
+  table.proyeccion {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 8.5pt;
+  }
+  table.proyeccion thead { display: table-header-group; }
+  table.proyeccion thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 5px 6px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    color: #6c757d;
+  }
+  table.proyeccion tbody tr { page-break-inside: avoid; }
+  table.proyeccion tbody td {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 5px 6px;
+    vertical-align: middle;
+  }
+  table.proyeccion .dias { color: #6c757d; white-space: nowrap; }
+  tr.row-vencido  td { background: #fbeeec; }
+  tr.row-proximo  td { background: #fbf1e2; }
+  tr.row-en-plazo td { background: #eaf5ef; }
+
+  .status-chip { font-size: 7.5pt; font-weight: 700; }
+  .status-chip::before { content: "●"; font-size: 6pt; margin-right: 3px; }
+  .row-vencido  .status-chip { color: #c0392b; }
+  .row-proximo  .status-chip { color: #9a6a1f; }
+  .row-en-plazo .status-chip { color: #2f7d5a; }
+
+  /* ── Historial: tarjeta por visita ── */
+  .history-card {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    page-break-inside: avoid;
+  }
+  .history-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 8.5pt;
+  }
+  .history-head .h-date { font-weight: 700; }
+  .history-head .h-tech { color: #6c757d; font-size: 7.5pt; }
+  .history-body { padding: 7px 10px; }
+
+  .interv-row { display: block; }
+  .interv-pill {
+    display: inline-block;
+    font-size: 7.5pt;
+    padding: 2px 6px 2px 5px;
+    border-radius: 10px;
+    border: 0.5px solid;
+    margin: 0 4px 4px 0;
+    white-space: nowrap;
+  }
+  .interv-pill::before { content: "●"; font-size: 5.5pt; margin-right: 3px; }
+  .pill-reemplazo { background: #fbeeec; border-color: #f0d3ce; color: #c0392b; }
+  .pill-limpieza  { background: #eaf2ff; border-color: #dee2e6; color: #0d6efd; }
+  .pill-revision  { background: #ffffff; border-color: #dee2e6; color: #6c757d; }
+
+  .history-obs {
+    font-size: 7.5pt;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 14px;
+    font-size: 7.5pt;
+    color: #6c757d;
+    margin-top: 4px;
+  }
+  .legend span::before { content: "●"; font-size: 6pt; margin-right: 3px; }
+  .legend .l-reemplazo::before { color: #c0392b; }
+  .legend .l-limpieza::before  { color: #0d6efd; }
+  .legend .l-revision::before  { color: #6c757d; }
 
   /* ── Sin datos ── */
   .empty { color: #6c757d; font-style: italic; font-size: 8.5pt; }
@@ -133,7 +179,6 @@
   }
 
   .mono { font-family: "DejaVu Sans Mono", monospace; }
-  .text-muted { color: #6c757d; }
   .nowrap { white-space: nowrap; }
 </style>
 </head>
@@ -148,6 +193,10 @@
   <div class="header-meta">
     <strong>Reporte individual de cliente</strong>
     Generado: {{ fecha_generacion.strftime('%d de %B de %Y') }}
+    {% if desde or hasta %}
+      <br>Historial: {{ desde.strftime('%d/%m/%Y') if desde else 'inicio' }}
+      – {{ hasta.strftime('%d/%m/%Y') if hasta else 'hoy' }}
+    {% endif %}
   </div>
 </div>
 
@@ -206,47 +255,29 @@
   {# ── Proyección de componentes ── #}
   <div class="section-title">Proyección de vencimientos</div>
   {% if item.proyeccion %}
-  <table>
+  <table class="proyeccion">
     <thead>
       <tr>
         <th>Componente</th>
         <th>Próximo vencimiento</th>
         <th>Días</th>
         <th>Estado</th>
-        <th>Intervalo usado</th>
-        <th>Fuente</th>
       </tr>
     </thead>
     <tbody>
       {% for v in item.proyeccion %}
-        {% if v.urgencia == 'vencido' %}{% set row_cls = 'row-vencido' %}
-        {% elif v.urgencia == 'proximo' %}{% set row_cls = 'row-proximo' %}
-        {% else %}{% set row_cls = '' %}{% endif %}
+        {% if v.urgencia == 'vencido' %}{% set row_cls = 'row-vencido' %}{% set etiqueta = 'Vencido' %}
+        {% elif v.urgencia == 'proximo' %}{% set row_cls = 'row-proximo' %}{% set etiqueta = 'Próximo' %}
+        {% else %}{% set row_cls = 'row-en-plazo' %}{% set etiqueta = 'En plazo' %}{% endif %}
       <tr class="{{ row_cls }}">
         <td>{{ v.componente.nombre }}</td>
         <td class="nowrap">{{ v.fecha_proyectada.strftime('%d/%m/%Y') }}</td>
-        <td class="nowrap">
+        <td class="dias nowrap">
           {% if v.dias_restantes < 0 %}hace {{ -v.dias_restantes }} d
           {% elif v.dias_restantes == 0 %}hoy
           {% else %}en {{ v.dias_restantes }} d{% endif %}
         </td>
-        <td>
-          {% if v.urgencia == 'vencido' %}
-            <span class="badge badge-danger">Vencido</span>
-          {% elif v.urgencia == 'proximo' %}
-            <span class="badge badge-warning">Próximo</span>
-          {% else %}
-            <span class="badge badge-success">En plazo</span>
-          {% endif %}
-        </td>
-        <td class="nowrap">{{ v.intervalo_usado }} días</td>
-        <td>
-          {% if v.fuente == 'historico' %}
-            <span class="badge badge-primary">histórico</span>
-          {% else %}
-            <span class="badge badge-secondary">nominal</span>
-          {% endif %}
-        </td>
+        <td><span class="status-chip">{{ etiqueta }}</span></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -258,45 +289,36 @@
   {# ── Historial de mantenimientos ── #}
   <div class="section-title" style="margin-top: 10px;">Historial de mantenimientos completados</div>
   {% if item.historial %}
-  <table>
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>Técnico</th>
-        <th>Intervenciones</th>
-        <th>Observaciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for m in item.historial %}
-      <tr>
-        <td class="nowrap">{{ m.fecha.strftime('%d/%m/%Y') }}</td>
-        <td class="nowrap">{{ m.tecnico.nombre if m.tecnico else '—' }}</td>
-        <td>
-          {% if m.detalles %}
-            <ul class="detail-list">
-              {% for d in m.detalles %}
-                <li>
-                  {{ d.componente.nombre }}
-                  <span class="badge
-                    {% if d.accion == 'reemplazo' %}badge-danger
-                    {% elif d.accion == 'limpieza' %}badge-info
-                    {% else %}badge-secondary{% endif %}">
-                    {{ d.accion }}
-                  </span>
-                  {% if d.notas %}<span class="text-muted"> — {{ d.notas }}</span>{% endif %}
-                </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <span class="text-muted">Sin detalles</span>
-          {% endif %}
-        </td>
-        <td>{{ m.observaciones or '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% for m in item.historial %}
+    <div class="history-card">
+      <div class="history-head">
+        <span class="h-date">{{ m.fecha.strftime('%d/%m/%Y') }}</span>
+        <span class="h-tech">{{ m.tecnico.nombre if m.tecnico else '—' }}</span>
+      </div>
+      <div class="history-body">
+        {% if m.detalles %}
+          <div class="interv-row">
+            {% for d in m.detalles %}
+              <span class="interv-pill
+                {% if d.accion == 'reemplazo' %}pill-reemplazo
+                {% elif d.accion == 'limpieza' %}pill-limpieza
+                {% else %}pill-revision{% endif %}">{{ d.componente.nombre }}</span>
+            {% endfor %}
+          </div>
+        {% else %}
+          <span class="empty">Sin detalles</span>
+        {% endif %}
+        {% if m.observaciones %}
+          <div class="history-obs">{{ m.observaciones }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    <div class="legend">
+      <span class="l-reemplazo">Reemplazo</span>
+      <span class="l-limpieza">Limpieza</span>
+      <span class="l-revision">Revisión</span>
+    </div>
   {% else %}
     <p class="empty">No hay mantenimientos completados registrados para este equipo.</p>
   {% endif %}
