@@ -25,14 +25,23 @@ ROLES_USUARIO = ("propietario", "administrativo", "tecnico")
 @role_required(*_admin_roles)
 def clientes():
     zona_id = request.args.get("zona_id", type=int)
+    q = request.args.get("q", "").strip()
+    page = request.args.get("page", 1, type=int)
     zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
     stmt = select(Cliente).where(Cliente.activo == True)
     if zona_id:
         stmt = stmt.join(Cliente.equipos).where(
             EquipoInstalado.zona_id == zona_id, EquipoInstalado.activo == True
         )
-    clientes = db.session.execute(stmt.order_by(Cliente.nombre)).scalars().all()
-    return render_template("admin/clientes.html", clientes=clientes, zonas=zonas, zona_id=zona_id)
+    if q:
+        stmt = stmt.where(
+            db.or_(Cliente.nombre.ilike(f"%{q}%"), Cliente.identificador.ilike(f"%{q}%"))
+        )
+    stmt = stmt.order_by(Cliente.nombre)
+    paginacion = db.paginate(stmt, page=page, per_page=30, error_out=False)
+    return render_template(
+        "admin/clientes.html", paginacion=paginacion, zonas=zonas, zona_id=zona_id, q=q
+    )
 
 
 @admin_bp.route("/clientes/nuevo", methods=["GET", "POST"])
@@ -110,6 +119,28 @@ def eliminar_cliente(id):
     db.session.commit()
     flash(f"Cliente {cliente.nombre} eliminado.", "success")
     return redirect(url_for("admin.clientes"))
+
+
+@admin_bp.route("/clientes/buscar")
+@login_required
+def buscar_clientes():
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([])
+    stmt = (
+        select(Cliente)
+        .where(
+            Cliente.activo == True,
+            db.or_(Cliente.nombre.ilike(f"%{q}%"), Cliente.identificador.ilike(f"%{q}%")),
+        )
+        .order_by(Cliente.nombre)
+        .limit(20)
+    )
+    clientes = db.session.execute(stmt).scalars().all()
+    return jsonify([
+        {"id": c.id, "nombre": c.nombre, "identificador": c.identificador}
+        for c in clientes
+    ])
 
 
 @admin_bp.route("/clientes/sugerir-codigo")
@@ -366,13 +397,23 @@ def eliminar_componente(id):
 def equipos():
     zona_id = request.args.get("zona_id", type=int)
     cliente_id = request.args.get("cliente_id", type=int)
+    q = request.args.get("q", "").strip()
+    page = request.args.get("page", 1, type=int)
 
     stmt = select(EquipoInstalado).where(EquipoInstalado.activo == True)
     if zona_id:
         stmt = stmt.where(EquipoInstalado.zona_id == zona_id)
     if cliente_id:
         stmt = stmt.where(EquipoInstalado.cliente_id == cliente_id)
-    equipos = db.session.execute(stmt).scalars().all()
+    if q:
+        stmt = stmt.join(Cliente).where(
+            db.or_(
+                EquipoInstalado.numero_serie.ilike(f"%{q}%"),
+                Cliente.nombre.ilike(f"%{q}%"),
+            )
+        )
+    stmt = stmt.order_by(EquipoInstalado.id)
+    paginacion = db.paginate(stmt, page=page, per_page=30, error_out=False)
 
     stmt_i = select(EquipoInstalado).where(EquipoInstalado.activo == False)
     if zona_id:
@@ -410,12 +451,13 @@ def equipos():
         zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
 
     return render_template("admin/equipos.html",
-                           equipos=equipos,
+                           paginacion=paginacion,
                            equipos_inactivos=equipos_inactivos,
                            zonas=zonas,
                            clientes=clientes,
                            zona_id=zona_id,
-                           cliente_id=cliente_id)
+                           cliente_id=cliente_id,
+                           q=q)
 
 
 @admin_bp.route("/equipos/nuevo", methods=["GET", "POST"])

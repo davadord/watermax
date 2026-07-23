@@ -1,22 +1,20 @@
 {% extends "base.html" %}
-{% from "_macros.html" import page_header, empty_state, icon_link %}
+{% from "_macros.html" import page_header, empty_state, icon_link, client_picker %}
 {% block title %}Mantenimientos — Watermax{% endblock %}
 {% block content %}
 
 {% call page_header("Mantenimientos", icon="clipboard2-check",
     breadcrumb=[("Mantenimientos", None)]) %}
+  <a href="{{ url_for('maintenance.buscar_equipo') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-clipboard2-plus"></i> Nuevo mantenimiento
+  </a>
 {% endcall %}
 
 <form method="GET" class="wm-form-card mb-4">
   <div class="row g-3 align-items-end">
     <div class="col-md-4">
-      <label class="form-label" for="cliente_id">Cliente</label>
-      <select name="cliente_id" id="cliente_id" class="form-select">
-        <option value="">— Todos los clientes —</option>
-        {% for c in clientes %}
-          <option value="{{ c.id }}" {{ 'selected' if c.id == cliente_id }}>{{ c.nombre }}</option>
-        {% endfor %}
-      </select>
+      <label class="form-label" for="cliente_id_buscar">Cliente</label>
+      {{ client_picker(clientes, selected_id=cliente_id, required=False, placeholder="Todos los clientes…") }}
     </div>
     <div class="col-md-3">
       <label class="form-label" for="fecha_desde">Desde</label>

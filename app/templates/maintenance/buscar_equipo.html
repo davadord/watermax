@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header, empty_state, client_picker %}
+{% block title %}Nuevo mantenimiento — Watermax{% endblock %}
+{% block content %}
+
+{{ page_header(
+    "Nuevo mantenimiento",
+    subtitle="Busca el cliente para elegir el equipo a atender.",
+    icon="clipboard2-plus",
+    breadcrumb=[("Mantenimientos", None), ("Nuevo", None)]) }}
+
+<form method="GET" class="wm-form-card mb-4" data-autofocus>
+  <label class="form-label" for="cliente_id_buscar">Cliente</label>
+  {{ client_picker(clientes, selected_id=(cliente.id if cliente else None), required=False,
+                    placeholder="Escribe el nombre o identificación del cliente…", autosubmit=True) }}
+</form>
+
+{% if not cliente %}
+  <div class="card">
+    <div class="card-body">
+      {{ empty_state(
+        title="Selecciona un cliente",
+        message="Busca por nombre o identificación para ver sus equipos instalados.",
+        icon="search") }}
+    </div>
+  </div>
+{% elif not equipos %}
+  <div class="card">
+    <div class="card-body">
+      {{ empty_state(
+        title="Sin equipos activos",
+        message=cliente.nombre ~ " no tiene equipos instalados activos.",
+        icon="tools") }}
+    </div>
+  </div>
+{% else %}
+  <p class="text-muted small mb-3">
+    {{ equipos|length }} equipo{% if equipos|length != 1 %}s{% endif %} de {{ cliente.nombre }}.
+    Selecciona uno para registrar el mantenimiento.
+  </p>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Equipo</th>
+          <th>Zona / Sector</th>
+          <th>N.° de serie</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for equipo in equipos %}
+          <tr>
+            <td>
+              <strong>{{ equipo.tipo_equipo.nombre }}</strong>
+              {% if equipo.tipo_equipo.marca %}
+                <span class="text-muted small">· {{ equipo.tipo_equipo.marca }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {{ equipo.zona.nombre }}
+              {% if equipo.sector %}<div class="text-muted small">{{ equipo.sector }}</div>{% endif %}
+            </td>
+            <td class="wm-mono">{{ equipo.numero_serie or '—' }}</td>
+            <td class="text-end">
+              <a href="{{ url_for('maintenance.nuevo_mantenimiento', equipo_id=equipo.id) }}"
+                 class="btn btn-primary btn-sm">
+                <i class="bi bi-clipboard2-plus"></i> Registrar
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}

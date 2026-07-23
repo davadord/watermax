@@ -42,6 +42,12 @@
             <i class="bi bi-exclamation-triangle-fill"></i> Críticos
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if ep in ('maintenance.listado_mantenimientos', 'maintenance.buscar_equipo', 'maintenance.nuevo_mantenimiento') %}active{% endif %}"
+             href="{{ url_for('maintenance.listado_mantenimientos') if is_admin else url_for('maintenance.buscar_equipo') }}">
+            <i class="bi bi-clipboard2-check"></i> Mantenimientos
+          </a>
+        </li>
         {% if is_admin %}
         <li class="nav-item">
           <a class="nav-link {% if ep in ('admin.clientes', 'admin.nuevo_cliente', 'admin.editar_cliente') %}active{% endif %}"
@@ -55,14 +61,8 @@
             <i class="bi bi-tools"></i> Equipos
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link {% if ep == 'maintenance.listado_mantenimientos' %}active{% endif %}"
-             href="{{ url_for('maintenance.listado_mantenimientos') }}">
-            <i class="bi bi-clipboard2-check"></i> Mantenimientos
-          </a>
-        </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if ep.startswith('admin.') and ep not in ('admin.clientes', 'admin.nuevo_cliente', 'admin.editar_cliente', 'admin.equipos', 'admin.nuevo_equipo', 'admin.editar_equipo') %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if ep.startswith('admin.') and ep not in ('admin.clientes', 'admin.nuevo_cliente', 'admin.editar_cliente', 'admin.equipos', 'admin.nuevo_equipo', 'admin.editar_equipo') and ep != 'reports.componentes_cambiados' %}active{% endif %}"
              href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-gear"></i> Catálogos
           </a>
@@ -73,6 +73,10 @@
               <i class="bi bi-cpu me-1"></i> Tipos de equipo</a></li>
             <li><a class="dropdown-item" href="{{ url_for('admin.componentes') }}">
               <i class="bi bi-puzzle me-1"></i> Componentes</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item {% if ep == 'reports.componentes_cambiados' %}active{% endif %}"
+                    href="{{ url_for('reports.componentes_cambiados') }}">
+              <i class="bi bi-graph-up me-1"></i> Componentes cambiados</a></li>
           </ul>
         </li>
         {% if current_user.rol == 'propietario' %}

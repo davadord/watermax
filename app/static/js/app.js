@@ -8,6 +8,7 @@
     initFilterReset();
     initSubmitGuard();
     initAutoFocus();
+    initClientPicker();
   });
 
   // Tooltips en cualquier elemento con data-bs-toggle="tooltip"
@@ -88,6 +89,10 @@
           if (el.tagName === "SELECT") el.selectedIndex = 0;
           else el.value = "";
         });
+        form.querySelectorAll("[data-client-picker]").forEach(function (input) {
+          var hidden = document.getElementById(input.dataset.clientPickerTarget);
+          if (hidden) hidden.value = "";
+        });
         form.submit();
       });
     });
@@ -113,6 +118,83 @@
             '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>' +
             (btn.dataset.loadingText || "Guardando…");
         });
+      });
+    });
+  }
+
+  // Selector de cliente por búsqueda server-side: al escribir, hace fetch
+  // a data-client-picker-url?q=... y muestra sugerencias reales (substring
+  // en nombre o identificación, no solo prefijo como un <datalist>).
+  //   <input data-client-picker data-client-picker-target="cliente_id"
+  //          data-client-picker-url="/admin/clientes/buscar">
+  //   <input type="hidden" id="cliente_id">
+  //   <ul class="wm-client-picker-results">
+  function initClientPicker() {
+    document.querySelectorAll("[data-client-picker]").forEach(function (input) {
+      var hidden = document.getElementById(input.dataset.clientPickerTarget);
+      var url = input.dataset.clientPickerUrl;
+      var results = input.parentElement.querySelector(".wm-client-picker-results");
+      if (!hidden || !url || !results) return;
+
+      var debounceTimer = null;
+      var lastQuery = "";
+
+      function hideResults() {
+        results.classList.add("d-none");
+        results.innerHTML = "";
+      }
+
+      function selectCliente(cliente) {
+        input.value = cliente.nombre + " — " + cliente.identificador;
+        var previo = hidden.value;
+        hidden.value = cliente.id;
+        hideResults();
+        if (input.hasAttribute("data-client-picker-autosubmit") && hidden.value !== previo) {
+          input.form.submit();
+        }
+      }
+
+      function renderResults(clientes) {
+        results.innerHTML = "";
+        if (!clientes.length) {
+          hideResults();
+          return;
+        }
+        clientes.forEach(function (cliente) {
+          var li = document.createElement("li");
+          li.className = "list-group-item list-group-item-action";
+          li.style.cursor = "pointer";
+          li.textContent = cliente.nombre + " — " + cliente.identificador;
+          li.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            selectCliente(cliente);
+          });
+          results.appendChild(li);
+        });
+        results.classList.remove("d-none");
+      }
+
+      input.addEventListener("input", function () {
+        hidden.value = "";
+        var q = input.value.trim();
+        clearTimeout(debounceTimer);
+        if (q.length < 2) {
+          hideResults();
+          return;
+        }
+        debounceTimer = setTimeout(function () {
+          lastQuery = q;
+          fetch(url + "?q=" + encodeURIComponent(q))
+            .then(function (r) { return r.json(); })
+            .then(function (clientes) {
+              if (q === lastQuery) renderResults(clientes);
+            })
+            .catch(function () { hideResults(); });
+        }, 250);
+      });
+
+      input.addEventListener("blur", function () {
+        setTimeout(hideResults, 150);
       });
     });
   }

@@ -131,3 +131,56 @@
     checked
   {%- endif -%}
 {%- endmacro %}
+
+{# Selector de cliente con búsqueda (datalist nativo): un <input> de texto
+   filtrado por el navegador + un <input type="hidden"> con el id real que
+   se completa en JS (ver initClientPicker en app.js). Útil cuando el
+   <select> con todos los clientes se vuelve inmanejable a escala. #}
+{# Paginación server-side reutilizable: navega con url_for(endpoint, page=N, **extra_args).
+   extra_args debe incluir todos los filtros activos para que se conserven al cambiar de página. #}
+{% macro pagination(paginacion, endpoint, extra_args={}, label="Paginación") %}
+  {% if paginacion.pages > 1 %}
+  <nav aria-label="{{ label }}">
+    <ul class="pagination justify-content-center">
+      <li class="page-item {{ 'disabled' if not paginacion.has_prev }}">
+        <a class="page-link" href="{{ url_for(endpoint, page=paginacion.prev_num, **extra_args) }}">&laquo;</a>
+      </li>
+      {% for p in paginacion.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+          <li class="page-item {{ 'active' if p == paginacion.page }}">
+            <a class="page-link" href="{{ url_for(endpoint, page=p, **extra_args) }}">{{ p }}</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {{ 'disabled' if not paginacion.has_next }}">
+        <a class="page-link" href="{{ url_for(endpoint, page=paginacion.next_num, **extra_args) }}">&raquo;</a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+{% endmacro %}
+
+{# Selector de cliente con búsqueda server-side: escribe → fetch a
+   /admin/clientes/buscar?q=... → lista de sugerencias. Al elegir una,
+   completa el <input type="hidden"> con el id real (ver initClientPicker
+   en app.js). `clientes` solo se usa para resolver el texto mostrado
+   cuando ya hay un selected_id (edición). #}
+{% macro client_picker(clientes, selected_id=None, name="cliente_id", required=True, placeholder="Buscar cliente por nombre o identificación…", autosubmit=False) %}
+  {% set selected_cliente = clientes|selectattr("id", "equalto", selected_id)|first if selected_id else None %}
+  <div class="wm-client-picker position-relative">
+    <input type="text" class="form-control{% if autosubmit %} form-control-sm{% endif %}"
+           id="{{ name }}_buscar" autocomplete="off"
+           placeholder="{{ placeholder }}"
+           value="{{ selected_cliente.nombre ~ ' — ' ~ selected_cliente.identificador if selected_cliente else '' }}"
+           data-client-picker data-client-picker-target="{{ name }}"
+           data-client-picker-url="{{ url_for('admin.buscar_clientes') }}"
+           {% if autosubmit %}data-client-picker-autosubmit{% endif %}
+           {% if required %}required aria-required="true"{% endif %}>
+    <input type="hidden" name="{{ name }}" id="{{ name }}"
+           value="{{ selected_id or '' }}">
+    <ul class="wm-client-picker-results list-group position-absolute w-100 shadow-sm d-none"
+        style="z-index: 1000; max-height: 16rem; overflow-y: auto;"></ul>
+  </div>
+{% endmacro %}

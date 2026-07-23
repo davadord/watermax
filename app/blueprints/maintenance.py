@@ -18,6 +18,36 @@ _all_roles = ("propietario", "administrativo", "tecnico")
 _admin_roles = ("propietario", "administrativo")
 
 
+@maintenance_bp.route("/nuevo")
+@login_required
+@role_required(*_all_roles)
+def buscar_equipo():
+    cliente_id = request.args.get("cliente_id", type=int)
+    q = request.args.get("q", "").strip()
+
+    stmt = select(Cliente).where(Cliente.activo == True)
+    if q:
+        stmt = stmt.where(
+            db.or_(Cliente.nombre.ilike(f"%{q}%"), Cliente.identificador.ilike(f"%{q}%"))
+        )
+    clientes = db.session.execute(stmt.order_by(Cliente.nombre).limit(50)).scalars().all()
+
+    cliente = db.session.get(Cliente, cliente_id) if cliente_id else None
+    equipos = []
+    if cliente:
+        equipos = db.session.execute(
+            select(EquipoInstalado)
+            .where(EquipoInstalado.cliente_id == cliente_id, EquipoInstalado.activo == True)
+            .options(joinedload(EquipoInstalado.tipo_equipo), joinedload(EquipoInstalado.zona))
+            .order_by(EquipoInstalado.id)
+        ).scalars().unique().all()
+
+    return render_template(
+        "maintenance/buscar_equipo.html",
+        clientes=clientes, cliente=cliente, equipos=equipos, q=q,
+    )
+
+
 @maintenance_bp.route("/nuevo/<int:equipo_id>", methods=["GET", "POST"])
 @login_required
 @role_required(*_all_roles)

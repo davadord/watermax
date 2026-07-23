@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import page_header, field_value, field_selected %}
+{% from "_macros.html" import page_header, field_value, field_selected, client_picker %}
 {% block title %}{% if equipo %}Editar equipo{% else %}Nuevo equipo{% endif %} — Watermax{% endblock %}
 {% block content %}
 
@@ -28,14 +28,7 @@
             </p>
             <input type="hidden" name="cliente_id" value="{{ cliente_preseleccionado.id }}">
           {% else %}
-            <select name="cliente_id" id="cliente_id" class="form-select" required aria-required="true">
-              <option value="">Selecciona un cliente…</option>
-              {% for cliente in clientes %}
-                <option value="{{ cliente.id }}" {{ field_selected('cliente_id', cliente.id, equipo.cliente_id if equipo else None) }}>
-                  {{ cliente.nombre }}{% if cliente.identificador %} — {{ cliente.identificador }}{% endif %}
-                </option>
-              {% endfor %}
-            </select>
+            {{ client_picker(clientes, selected_id=(equipo.cliente_id if equipo else None)) }}
           {% endif %}
         </div>
 

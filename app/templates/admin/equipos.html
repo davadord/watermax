@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import page_header, empty_state, delete_button, confirm_button, icon_link %}
+{% from "_macros.html" import page_header, empty_state, delete_button, confirm_button, icon_link, client_picker, pagination %}
 {% block title %}Equipos instalados — Watermax{% endblock %}
 {% block content %}
 
@@ -13,7 +13,13 @@
 {% endcall %}
 
 <form method="GET" class="wm-toolbar">
-  <label class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+  <label for="q" class="form-label mb-0 small fw-semibold text-uppercase text-muted">
+    <i class="bi bi-search"></i> Buscar
+  </label>
+  <input type="text" name="q" id="q" class="form-control form-control-sm" style="width: 14rem;"
+         placeholder="N.° de serie o cliente…" value="{{ q }}">
+
+  <label class="form-label mb-0 small fw-semibold text-uppercase text-muted ms-2">
     <i class="bi bi-funnel"></i> Filtrar
   </label>
   <select name="zona_id" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -22,28 +28,26 @@
       <option value="{{ zona.id }}" {% if zona_id == zona.id %}selected{% endif %}>{{ zona.nombre }}</option>
     {% endfor %}
   </select>
-  <select name="cliente_id" class="form-select form-select-sm" onchange="this.form.submit()">
-    <option value="">Todos los clientes</option>
-    {% for cliente in clientes %}
-      <option value="{{ cliente.id }}" {% if cliente_id == cliente.id %}selected{% endif %}>{{ cliente.nombre }}</option>
-    {% endfor %}
-  </select>
-  {% if zona_id or cliente_id %}
+  <div style="width: 12rem;">
+    {{ client_picker(clientes, selected_id=cliente_id, name="cliente_id", required=False, placeholder="Todos los clientes…", autosubmit=True) }}
+  </div>
+  <button type="submit" class="btn btn-outline-secondary btn-sm">Buscar</button>
+  {% if zona_id or cliente_id or q %}
     <button type="button" class="btn btn-link btn-sm text-decoration-none"
             data-filter-reset>Limpiar</button>
   {% endif %}
   <div class="wm-toolbar-spacer"></div>
   <span class="text-muted small">
-    <span class="wm-status wm-status-ok"><i class="bi bi-check"></i> {{ equipos|length }} activo{% if equipos|length != 1 %}s{% endif %}</span>
+    <span class="wm-status wm-status-ok"><i class="bi bi-check"></i> {{ paginacion.total }} activo{% if paginacion.total != 1 %}s{% endif %}</span>
     {% if equipos_inactivos %}
       <span class="wm-status wm-status-off ms-1"><i class="bi bi-archive"></i> {{ equipos_inactivos|length }} inactivo{% if equipos_inactivos|length != 1 %}s{% endif %}</span>
     {% endif %}
   </span>
 </form>
 
-{% if not equipos and not equipos_inactivos %}
+{% if not paginacion.items and not equipos_inactivos %}
   <div class="wm-table-card">
-    {% if zona_id or cliente_id %}
+    {% if zona_id or cliente_id or q %}
       {{ empty_state(
          title="Sin equipos para este filtro",
          message="Cambia o limpia los filtros para ver todos los equipos.",
@@ -63,7 +67,7 @@
   </div>
 {% else %}
 
-{% if equipos %}
+{% if paginacion.items %}
 <div class="wm-table-card mb-4">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
@@ -77,7 +81,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for equipo in equipos %}
+        {% for equipo in paginacion.items %}
         <tr>
           <td>
             <strong>{{ equipo.tipo_equipo.nombre }}</strong>
@@ -129,6 +133,7 @@
     </table>
   </div>
 </div>
+{{ pagination(paginacion, 'admin.equipos', extra_args={'zona_id': zona_id or '', 'cliente_id': cliente_id or '', 'q': q}) }}
 {% endif %}
 
 {% if equipos_inactivos %}
