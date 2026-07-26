@@ -62,33 +62,34 @@
   </div>
 {% endif %}
 
-{% if not zona_id %}
-  <div class="row g-3 mb-4">
-    <div class="col-sm-4">
-      <div class="card text-center border-danger">
-        <div class="card-body py-3">
-          <div class="fs-2 fw-bold text-danger">{{ resumen_global.vencidos }}</div>
-          <div class="small text-muted">Vencidos</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-4">
-      <div class="card text-center border-warning">
-        <div class="card-body py-3">
-          <div class="fs-2 fw-bold text-warning">{{ resumen_global.proximos }}</div>
-          <div class="small text-muted">Próximos a vencer</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-4">
-      <div class="card text-center">
-        <div class="card-body py-3">
-          <div class="fs-2 fw-bold">{{ resumen_global.total }}</div>
-          <div class="small text-muted">Total críticos</div>
-        </div>
+{% set resumen = resumen_zona if zona_id else resumen_global %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card text-center border-danger">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-danger">{{ resumen.vencidos }}</div>
+        <div class="small text-muted">Vencidos</div>
       </div>
     </div>
   </div>
+  <div class="col-sm-4">
+    <div class="card text-center border-warning">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-warning">{{ resumen.proximos }}</div>
+        <div class="small text-muted">Próximos a vencer</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold">{{ resumen.total }}</div>
+        <div class="small text-muted">Total críticos</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% if not zona_id %}
   {% if resumen_global.total > 0 %}
     <div class="text-end mb-3">
       <a href="{{ url_for('reports.criticos') }}" class="btn btn-outline-danger btn-sm">

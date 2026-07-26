@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import page_header, empty_state, delete_button, icon_link, pagination %}
+{% from "_macros.html" import page_header, empty_state, delete_button, confirm_button, icon_link, pagination %}
 {% block title %}Clientes — Watermax{% endblock %}
 {% block content %}
 
@@ -35,10 +35,15 @@
             data-filter-reset>Limpiar</button>
   {% endif %}
   <div class="wm-toolbar-spacer"></div>
-  <span class="text-muted small">{{ paginacion.total }} cliente{% if paginacion.total != 1 %}s{% endif %}</span>
+  <span class="text-muted small">
+    <span class="wm-status wm-status-ok"><i class="bi bi-check"></i> {{ paginacion.total }} activo{% if paginacion.total != 1 %}s{% endif %}</span>
+    {% if clientes_inactivos %}
+      <span class="wm-status wm-status-off ms-1"><i class="bi bi-archive"></i> {{ clientes_inactivos|length }} inactivo{% if clientes_inactivos|length != 1 %}s{% endif %}</span>
+    {% endif %}
+  </span>
 </form>
 
-{% if not paginacion.items %}
+{% if not paginacion.items and not clientes_inactivos %}
   <div class="wm-table-card">
     {% if zona_id or q %}
       {{ empty_state(
@@ -59,7 +64,9 @@
     {% endif %}
   </div>
 {% else %}
-<div class="wm-table-card">
+
+{% if paginacion.items %}
+<div class="wm-table-card mb-4">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
       <thead>
@@ -105,5 +112,55 @@
   </div>
 </div>
 {{ pagination(paginacion, 'admin.clientes', extra_args={'zona_id': zona_id or '', 'q': q}) }}
+{% endif %}
+
+{% if clientes_inactivos %}
+  <h2 class="h6 text-muted mt-4 mb-2">
+    <i class="bi bi-archive"></i> Clientes inactivos
+    <span class="text-muted small">— sin equipos activos, fuera de listados y reportes</span>
+  </h2>
+  <div class="wm-table-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle text-muted mb-0">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Identificación</th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
+            <th class="actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cliente in clientes_inactivos %}
+          <tr>
+            <td>{{ cliente.nombre }}</td>
+            <td>
+              <span class="text-muted small d-block">{{ cliente.tipo_identificador }}</span>
+              <span class="wm-mono">{{ cliente.identificador }}</span>
+            </td>
+            <td>{{ cliente.telefono or '—' }}</td>
+            <td class="text-truncate" style="max-width: 260px;" title="{{ cliente.direccion or '' }}">
+              {{ cliente.direccion or '—' }}
+            </td>
+            <td class="actions">
+              {{ confirm_button(
+                  url_for('admin.reactivar_cliente', id=cliente.id),
+                  title="¿Reactivar a " ~ cliente.nombre ~ "?",
+                  detail="El cliente volverá a aparecer en los listados y podrás agregarle equipos.",
+                  label_action="Sí, reactivar",
+                  variant="success",
+                  btn_class="btn-outline-success",
+                  icon="arrow-counterclockwise",
+                  label="Reactivar") }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
 {% endif %}
 {% endblock %}

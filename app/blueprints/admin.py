@@ -39,8 +39,18 @@ def clientes():
         )
     stmt = stmt.order_by(Cliente.nombre)
     paginacion = db.paginate(stmt, page=page, per_page=30, error_out=False)
+
+    stmt_i = select(Cliente).where(Cliente.activo == False)
+    if q:
+        stmt_i = stmt_i.where(
+            db.or_(Cliente.nombre.ilike(f"%{q}%"), Cliente.identificador.ilike(f"%{q}%"))
+        )
+    stmt_i = stmt_i.order_by(Cliente.nombre)
+    clientes_inactivos = db.session.execute(stmt_i).scalars().all()
+
     return render_template(
-        "admin/clientes.html", paginacion=paginacion, zonas=zonas, zona_id=zona_id, q=q
+        "admin/clientes.html", paginacion=paginacion, zonas=zonas, zona_id=zona_id, q=q,
+        clientes_inactivos=clientes_inactivos,
     )
 
 
@@ -118,6 +128,20 @@ def eliminar_cliente(id):
     cliente.activo = False
     db.session.commit()
     flash(f"Cliente {cliente.nombre} eliminado.", "success")
+    return redirect(url_for("admin.clientes"))
+
+
+@admin_bp.route("/clientes/<int:id>/reactivar", methods=["POST"])
+@login_required
+@role_required(*_admin_roles)
+def reactivar_cliente(id):
+    cliente = db.session.get(Cliente, id)
+    if not cliente or cliente.activo:
+        flash("Cliente no encontrado o ya está activo.", "danger")
+        return redirect(url_for("admin.clientes"))
+    cliente.activo = True
+    db.session.commit()
+    flash(f"Cliente {cliente.nombre} reactivado.", "success")
     return redirect(url_for("admin.clientes"))
 
 
@@ -382,6 +406,9 @@ def eliminar_componente(id):
     comp = db.session.get(Componente, id)
     if not comp:
         flash("Componente no encontrado.", "danger")
+        return redirect(url_for("admin.componentes"))
+    if comp.tipos_equipo:
+        flash(f"No se puede eliminar: {comp.nombre} está asociado a un tipo de equipo.", "danger")
         return redirect(url_for("admin.componentes"))
     db.session.delete(comp)
     db.session.commit()

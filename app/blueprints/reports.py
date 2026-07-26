@@ -32,6 +32,7 @@ def dashboard():
     zonas = db.session.execute(select(Zona).order_by(Zona.nombre)).scalars().all()
 
     mantenimientos_hoy = []
+    resumen_zona = None
     if zona_id:
         equipos = db.session.execute(
             select(EquipoInstalado).where(
@@ -39,20 +40,32 @@ def dashboard():
             )
         ).scalars().all()
         urgencias_filtro = ESTADOS_POR_FILTRO.get(estado)
+        equipos_vencidos = equipos_proximos = 0
         for equipo in equipos:
-            vencimientos = calcular_vencimientos(equipo, fecha_ref=fecha_ref)
+            vencimientos_equipo = calcular_vencimientos(equipo, fecha_ref=fecha_ref)
+            n_vencidos = sum(1 for v in vencimientos_equipo if v["urgencia"] == URGENCIA_VENCIDO)
+            n_proximos = sum(1 for v in vencimientos_equipo if v["urgencia"] == URGENCIA_PROXIMO)
+            if n_vencidos:
+                equipos_vencidos += 1
+            elif n_proximos:
+                equipos_proximos += 1
+
+            vencimientos = vencimientos_equipo
             if urgencias_filtro is not None:
                 vencimientos = [v for v in vencimientos if v["urgencia"] in urgencias_filtro]
                 if not vencimientos:
                     continue
-            n_vencidos = sum(1 for v in vencimientos if v["urgencia"] == URGENCIA_VENCIDO)
-            n_proximos = sum(1 for v in vencimientos if v["urgencia"] == URGENCIA_PROXIMO)
             mantenimientos_hoy.append({
                 "equipo": equipo,
                 "vencimientos": vencimientos,
                 "_sort": (-n_vencidos, -n_proximos),
             })
         mantenimientos_hoy.sort(key=lambda x: x["_sort"])
+        resumen_zona = {
+            "vencidos": equipos_vencidos,
+            "proximos": equipos_proximos,
+            "total": equipos_vencidos + equipos_proximos,
+        }
 
     resumen_global = get_resumen_global()
 
@@ -64,6 +77,7 @@ def dashboard():
         fecha=fecha_ref.isoformat(),
         mantenimientos_hoy=mantenimientos_hoy,
         resumen_global=resumen_global,
+        resumen_zona=resumen_zona,
         today=date.today().isoformat(),
     )
 
