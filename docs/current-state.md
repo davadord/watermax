@@ -1,6 +1,6 @@
 # Estado actual del proyecto
 
-> Última actualización: 2026-07-09
+> Última actualización: 2026-07-26
 
 ---
 
@@ -14,37 +14,40 @@
 | S3 | #10 #11 #12 #23 #26 — Alertas críticas, dashboard global, motor refinado | Completado | 2026-05-14 |
 | S4 | #13 #14 #15 — report_service, PDFs WeasyPrint | Completado | 2026-05-14 |
 | Auditoría pre-S5 | Correcciones bloqueantes para PythonAnywhere | Completado | 2026-05-14 |
-| **S5** | #16 #17 #18 #19 #20 #29 #31 #32 #33 | **En curso** — #18 (25-05), #29 (31-05), #16+#30 (01-06), #31 (02-06), #32 (05-06), #33 (08-07) cerrados | due 2026-07-04 |
+| **S5** | #16 #17 #18 #19 #20 #29 #31 #32 #33 | **Completado** — todos los issues de milestone cerrados | 2026-07-26 |
+
+**Fase activa: preparación de la sustentación oral.** El código de sprint está cerrado; el documento de titulación (`ORDONEZ_MENDIETA_DAVID_ADRIAN_PT_SISTEMAS.md/.docx`) y el material de defensa están en `watermax-notas`.
 
 ---
 
-## Issues abiertos
+## Issues del milestone Sprint 5 — TODOS CERRADOS
 
-### Sprint 5 — milestone: "Sprint 5 - Calidad y Despliegue"
+| # | Título | MoSCoW | Estado |
+|---|--------|--------|--------|
+| #18 | Despliegue en PythonAnywhere (plan Developer) | must-have | **Cerrado** 2026-05-25 |
+| #29 | Listado, edición y anulación de mantenimientos | must-have | **Cerrado** 2026-05-31 |
+| #16 | Tests de rendimiento con JMeter | must-have | **Cerrado** 2026-06-01 — 5/5 criterios cumplen en PA (p7/p7b). Dashboard y PDF resueltos vía #30 |
+| #31 | Suite de pruebas unitarias — motor predictivo + modelo Usuario | must-have | **Cerrado** 2026-06-02 — 34 pruebas pytest |
+| #32 | Suite de pruebas unitarias — CRUD gestión usuarios | must-have | **Cerrado** 2026-06-05 — 17 pruebas pytest (51 total) |
+| #33 | Perfil de usuario (RF-04) + refactor de suite a pruebas unitarias puras | must-have | **Cerrado** 2026-07-08 — 65/65 pruebas, 100% unitarias, 88% cobertura en módulos críticos |
+| #17 | Evaluación de usabilidad SUS (≥68 puntos) | must-have | **Cerrado** 2026-07-23 — media 85.0 ("Bueno"), 4 evaluadores reales |
+| #19 | Configuración de dominio .com | should-have | **Cerrado** 2026-07-23 — alcance reducido: se queda en pre-producción con subdominio PythonAnywhere (HTTPS válido), sin dominio propio |
+| #20 | Documentación técnica final (ISO/IEC 25010) | must-have | **Cerrado** 2026-07-26 — PT completo con ISO 25010, UML, JMeter+SUS, LOPDP y ADR (docs/decisions.md) |
 
-| # | Título | MoSCoW | Estimación | Estado |
-|---|--------|--------|-----------|--------|
-| #18 | Despliegue en PythonAnywhere (plan Developer) | must-have | 8 h | **Cerrado** 2026-05-25 |
-| #29 | Listado, edición y anulación de mantenimientos | must-have | 12 h | **Cerrado** 2026-05-31 |
-| #16 | Tests de rendimiento con JMeter | must-have | 8 h | **Cerrado** 2026-06-01 — 5/5 criterios cumplen en PA (p7/p7b). Dashboard y PDF resueltos vía #30 |
-| #31 | Suite de pruebas unitarias — motor predictivo + modelo Usuario | must-have | 6 h | **Cerrado** 2026-06-02 — 34 pruebas pytest |
-| #32 | Suite de pruebas unitarias — CRUD gestión usuarios | must-have | 4 h | **Cerrado** 2026-06-05 — 17 pruebas pytest (51 total) |
-| #33 | Perfil de usuario (RF-04) + refactor de suite a pruebas unitarias puras | must-have | — | **Cerrado** 2026-07-08 — 65/65 pruebas, 100% unitarias, 88% cobertura en módulos críticos |
-| #17 | Evaluación de usabilidad SUS (≥68 puntos) | must-have | 8 h | **En curso** — filtros estado/fecha/cliente en reportes + PDF de zona horizontal aplicados (09-07). Pendiente: sembrar en PA, ejecutar 5 sesiones, cerrar |
-| #19 | Configuración de dominio .com | should-have | 4 h | Abierto |
-| #20 | Documentación técnica final (ISO/IEC 25010) | must-have | 16 h | Abierto |
+App desplegada en: https://dordonezm2.pythonanywhere.com/ (plan Developer, pre-producción)
 
-App desplegada en: https://dordonezm2.pythonanywhere.com/ (plan Developer)
+### Deuda técnica — cerrada 2026-07-26
 
-**Orden lógico restante:** #17 → #19 → #20
-
-### Deuda técnica abierta (sin milestone)
-
-| # | Título | Origen | Bloquea |
+| # | Título | Origen | Resolución |
 |---|--------|--------|---------|
 | ~~#27~~ | ~~Verificar instalación de mysqlclient en PythonAnywhere~~ | Auditoría 2026-05-14 | **Cerrado** 2026-05-31 — mysqlclient 2.2.8 funciona sin cambios en PA |
-| #28 | Mejorar diseño páginas de error 404/500 | Auditoría 2026-05-14 | — |
+| ~~#28~~ | ~~Mejorar diseño páginas de error 404/500~~ | Auditoría 2026-05-14 | **Cerrado** 2026-07-26 — errors/404.html con diseño completo, navbar protegido para anónimos, rollback en handler 500 |
 | ~~#30~~ | ~~Optimizar dashboard bajo carga y generación PDF en PA~~ | JMeter p4 (2026-06-01) | **Cerrado** 2026-06-01 — C1 y C2 cumplen en PA (p7/p7b). D16 reportlab + D17 caché resumen global |
+| ~~#34~~ | ~~Buscador y paginación en listado de clientes~~ | Auditoría UX (500 equipos) | **Cerrado** 2026-07-26 — resuelto en commit 5e1faa7 (2026-07-23) |
+| ~~#35~~ | ~~Buscador y paginación en listado de equipos~~ | Auditoría UX (500 equipos) | **Cerrado** 2026-07-26 — resuelto en commit 5e1faa7 (2026-07-23) |
+| ~~#36~~ | ~~Reemplazar select por buscador (autocomplete)~~ | Auditoría UX (500 equipos) | **Cerrado** 2026-07-26 — componente client_picker, commit 5e1faa7 |
+| ~~#37~~ | ~~Alta rápida de mantenimiento~~ | Pedido del tutor | **Cerrado** 2026-07-26 — vista /maintenance/nuevo, commit 5e1faa7 |
+| ~~#38~~ | ~~Propagar filtro de zona dashboard↔reportes~~ | Auditoría UX | **Cerrado** 2026-07-26 — dashboard ya propaga zona_id a componentes_cambiados, commit 5e1faa7 |
 
 ---
 
@@ -75,10 +78,10 @@ Funcionalidad completamente implementada y funcionando en desarrollo:
 
 ## Deuda técnica conocida
 
+Toda la deuda técnica identificada durante el proyecto está cerrada (ver tabla de arriba: #27, #28, #30, #34-#38).
+
 | Ref | Descripción | Severidad | Estado |
 |-----|-------------|-----------|--------|
-| ~~#27~~ | ~~`mysqlclient` puede fallar al compilar en Ubuntu~~ | Bloqueante para deploy | **Cerrado** 2026-05-31 — mysqlclient 2.2.8 funciona sin cambios en PA |
-| #28 | Templates 404/500 son mínimas (solo texto básico) | Cosmético | Issue abierto |
 | — | `setup_db.py` versionado en el repo (commit b6a33a5) con SQLAlchemy 2.0 + stamp head | Resuelto | — |
 | — | Suite de tests: 65 pruebas 100% unitarias (pytest) — motor predictivo, CRUD usuarios, auth, perfil | Resuelto | #31 + #32 + #33 cerrados |
 
@@ -163,11 +166,7 @@ Optimización pendiente trasladada al issue #30:
 
 ## Próximos pasos
 
-1. ~~**#16** y **#30**~~ — **Cerrados 2026-06-01.** C1 y C2 cumplen en PA (JMeter p7/p7b);
-   D16 (reportlab) + D17 (caché resumen global).
-2. **#17:** evaluación SUS con usuarios reales (≥ 68 puntos).
-3. **#19:** configurar dominio .com.
-4. **#20:** redactar documentación ISO 25010 con resultados de #16 y #17.
+Sprint 5 completado — no quedan issues de código pendientes. Próximo hito: sustentación oral (ver `watermax-notas/sustentacion/`).
 
 ---
 
